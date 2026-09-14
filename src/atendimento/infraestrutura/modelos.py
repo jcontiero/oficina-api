@@ -1,0 +1,209 @@
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import TypeDecorator
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from src.shared.banco import Base
+from src.atendimento.dominio.value_objects import StatusOS, CPF, CNPJ, Placa
+
+
+class CPFType(TypeDecorator):
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return value.valor if isinstance(value, CPF) else value
+
+    def process_result_value(self, value, dialect):
+        return CPF(value) if value else None
+
+
+class CNPJType(TypeDecorator):
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return value.valor if isinstance(value, CNPJ) else value
+
+    def process_result_value(self, value, dialect):
+        return CNPJ(value) if value else None
+
+
+class PlacaType(TypeDecorator):
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return value.valor if isinstance(value, Placa) else value
+
+    def process_result_value(self, value, dialect):
+        return Placa(value) if value else None
+
+
+class ClienteModel(Base):
+    __tablename__ = "clientes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    nome: Mapped[str] = mapped_column(String, nullable=False)
+    cpf: Mapped[CPF | None] = mapped_column(
+        CPFType(11), unique=True, nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="ATIVO")
+
+    cnpj: Mapped[CNPJ | None] = mapped_column(
+        CNPJType(14), unique=True, nullable=True, index=True
+    )
+    email: Mapped[str] = mapped_column(String, nullable=False)
+    telefone: Mapped[str] = mapped_column(String, nullable=False)
+
+    veiculos: Mapped[list["VeiculoModel"]] = relationship(back_populates="cliente")
+    ordens_de_servico: Mapped[list["OrdemDeServicoModel"]] = relationship(
+        back_populates="cliente"
+    )
+
+
+class VeiculoModel(Base):
+    __tablename__ = "veiculos"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    cliente_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=False
+    )
+    placa: Mapped[Placa] = mapped_column(
+        PlacaType(8), unique=True, nullable=False, index=True
+    )
+    marca: Mapped[str] = mapped_column(String, nullable=False)
+    modelo: Mapped[str] = mapped_column(String, nullable=False)
+    ano: Mapped[int] = mapped_column(nullable=False)
+    cor: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    cliente: Mapped["ClienteModel"] = relationship(back_populates="veiculos")
+    ordens_de_servico: Mapped[list["OrdemDeServicoModel"]] = relationship(
+        back_populates="veiculo"
+    )
+
+
+class OrdemDeServicoModel(Base):
+    __tablename__ = "ordens_de_servico"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    cliente_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=False
+    )
+    veiculo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("veiculos.id"), nullable=False
+    )
+    descricao_problema: Mapped[str] = mapped_column(String, nullable=False)
+    laudo_diagnostico: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[StatusOS] = mapped_column(
+        SAEnum(StatusOS, name="status_os", native_enum=False),
+        nullable=False,
+        default=StatusOS.RECEBIDA,
+    )
+    valor_orcamento: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+
+    criada_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    atualizada_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    cliente: Mapped["ClienteModel"] = relationship(back_populates="ordens_de_servico")
+    veiculo: Mapped["VeiculoModel"] = relationship(back_populates="ordens_de_servico")
+    itens_servico: Mapped[list["ItemServicoModel"]] = relationship(
+        back_populates="ordem_de_servico", cascade="all, delete-orphan"
+    )
+    itens_peca: Mapped[list["ItemPecaModel"]] = relationship(
+        back_populates="ordem_de_servico", cascade="all, delete-orphan"
+    )
+    historico: Mapped[list["HistoricoOSModel"]] = relationship(
+        back_populates="os", cascade="all, delete-orphan"
+    )
+
+
+
+class HistoricoOSModel(Base):
+    __tablename__ = "historico_os"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    os_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ordens_de_servico.id"), nullable=False
+    )
+    status_anterior: Mapped[StatusOS | None] = mapped_column(
+        SAEnum(StatusOS, name="status_os", native_enum=False), nullable=True
+    )
+    status_novo: Mapped[StatusOS] = mapped_column(
+        SAEnum(StatusOS, name="status_os", native_enum=False), nullable=False
+    )
+    ocorrido_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    sequencia: Mapped[int] = mapped_column(nullable=False)
+    origem: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    os: Mapped["OrdemDeServicoModel"] = relationship(back_populates="historico")
+
+
+class ItemServicoModel(Base):
+    __tablename__ = "itens_servico"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    os_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ordens_de_servico.id"), nullable=False
+    )
+    servico_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    descricao: Mapped[str] = mapped_column(String, nullable=False)
+    preco_unitario: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    observacao: Mapped[str | None] = mapped_column(String, nullable=True, default="")
+    concluido: Mapped[bool] = mapped_column(Boolean, default=False)
+    concluido_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    ordem_de_servico: Mapped["OrdemDeServicoModel"] = relationship(
+        back_populates="itens_servico"
+    )
+
+
+class ItemPecaModel(Base):
+    __tablename__ = "itens_peca"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    os_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ordens_de_servico.id"), nullable=False
+    )
+    peca_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    descricao: Mapped[str] = mapped_column(String, nullable=False)
+    quantidade: Mapped[int] = mapped_column(nullable=False)
+    preco_unitario: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+
+    ordem_de_servico: Mapped["OrdemDeServicoModel"] = relationship(
+        back_populates="itens_peca"
+    )
