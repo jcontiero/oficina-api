@@ -54,6 +54,14 @@
         <pre id="status-result">Aguardando ação...</pre>
     </div>
 
+    <div class="card" id="auth-serverless-card" style="border: 2px solid #8e44ad; background-color: #fcf3ff;">
+        <h3 style="color: #8e44ad;">🔐 Fase 3 - Autenticação de Cliente (Serverless)</h3>
+        <p>Gera o token JWT do Cliente batendo na Cloud Function através do API Gateway.</p>
+        <input type="text" id="cpf-cliente" placeholder="CPF do Cliente (ex: 12345678909)" value="12345678909">
+        <button onclick="loginCliente()" style="background-color: #8e44ad;">Fazer Login Serverless (Cliente)</button>
+        <span id="login-cliente-status" style="margin-left: 15px; font-weight: bold; color: #666;">Não autenticado</span>
+    </div>
+
     <div class="card" style="background-color: #f1f8ff; padding: 10px; margin-bottom: 20px;">
         <label for="api-env"><strong>Ambiente: </strong></label>
         <select id="api-env" onchange="updateApiUrl()">
@@ -74,8 +82,8 @@
 
         async function login() {
             const payload = {
-                email: 'admin@oficina.com',
-                senha: 'senha123'
+                email: 'admin@oficina.com.br',
+                senha: 'admin123'
             };
 
             const res = await fetch(`${API_URL}/auth/login`, {
@@ -86,10 +94,31 @@
             const data = await res.json();
             if (data.token) {
                 token = data.token;
-                document.getElementById('login-status').innerText = '✅ Autenticado com Sucesso!';
+                document.getElementById('login-status').innerText = '✅ Autenticado (Admin)!';
                 document.getElementById('login-status').style.color = '#28a745';
             } else {
-                alert("Falha no login! " + JSON.stringify(data));
+                alert("Falha no login admin! " + JSON.stringify(data));
+            }
+        }
+
+        async function loginCliente() {
+            const cpf = document.getElementById('cpf-cliente').value;
+            if (!cpf) return alert("Digite o CPF!");
+            
+            const payload = { cpf: cpf };
+
+            const res = await fetch(`${API_URL}/auth/cpf`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.token) {
+                token = data.token;
+                document.getElementById('login-cliente-status').innerText = '✅ Autenticado Serverless (Cliente)!';
+                document.getElementById('login-cliente-status').style.color = '#8e44ad';
+            } else {
+                alert("Falha na autenticação serverless! " + JSON.stringify(data));
             }
         }
 
