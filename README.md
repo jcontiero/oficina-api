@@ -1,4 +1,8 @@
 # Oficina Mecânica - API Principal
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=alert_status)](https://sonarcloud.io/dashboard?id=jcontiero_oficina-api)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=coverage)](https://sonarcloud.io/dashboard?id=jcontiero_oficina-api)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=bugs)](https://sonarcloud.io/dashboard?id=jcontiero_oficina-api)
+
 
 ## Propósito
 Este repositório contém o coração do sistema da Oficina Mecânica. Ele é responsável pelo gerenciamento de clientes, veículos, estoque, catálogo de serviços e o motor de estado das Ordens de Serviço (OS), orquestrando transações robustas através do padrão *Unit of Work* e *Outbox*.
