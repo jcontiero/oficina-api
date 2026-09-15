@@ -1,7 +1,7 @@
 # Oficina Mecânica - API Principal
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=alert_status)](https://sonarcloud.io/dashboard?id=jcontiero_oficina-api)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=coverage)](https://sonarcloud.io/dashboard?id=jcontiero_oficina-api)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=bugs)](https://sonarcloud.io/dashboard?id=jcontiero_oficina-api)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jcontiero_oficina-api)](https://sonarcloud.io/summary/new_code?id=jcontiero_oficina-api)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jcontiero_oficina-api)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=jcontiero_oficina-api)
 
 
 ## Propósito
