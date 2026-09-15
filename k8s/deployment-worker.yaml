@@ -14,6 +14,7 @@ spec:
       labels:
         app: oficina-api-worker
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: worker
           image: us-east1-docker.pkg.dev/pos-fiap-2026/oficina-docker/oficina-api:latest
