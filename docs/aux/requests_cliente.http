@@ -16,7 +16,10 @@
 ### do atendimento (pode estar no recibo ou e-mail recebido).
 ### ============================================================
 
+# Escolha o ambiente de execucao:
 @base_url = http://localhost:8000
+# @base_url = https://api.oficina.internal
+
 
 # ============================================================
 # PASSO 1 — ACOMPANHAR STATUS DA OS (rota pública)

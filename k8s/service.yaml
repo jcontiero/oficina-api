@@ -4,6 +4,8 @@ metadata:
   name: oficina-api-service
   labels:
     app: oficina-api
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
 spec:
   type: ClusterIP
   selector:

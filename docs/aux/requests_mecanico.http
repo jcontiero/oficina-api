@@ -14,7 +14,10 @@
 ###      (Quando todos forem executados → SERVICOS_CONCLUIDOS)
 ### ============================================================
 
+# Escolha o ambiente de execucao:
 @base_url = http://localhost:8000
+# @base_url = https://api.oficina.internal
+
 
 # ============================================================
 # PASSO 1 — LOGIN DO MECÂNICO

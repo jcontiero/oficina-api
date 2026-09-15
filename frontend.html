@@ -54,9 +54,23 @@
         <pre id="status-result">Aguardando ação...</pre>
     </div>
 
+    <div class="card" style="background-color: #f1f8ff; padding: 10px; margin-bottom: 20px;">
+        <label for="api-env"><strong>Ambiente: </strong></label>
+        <select id="api-env" onchange="updateApiUrl()">
+            <option value="http://localhost:8000">Localhost (Desenvolvimento)</option>
+            <option value="https://api.oficina.internal">API Gateway GCP (Produção)</option>
+        </select>
+        <span style="font-size: 12px; margin-left: 10px;">URL Base: <b id="current-url">http://localhost:8000</b></span>
+    </div>
+
     <script>
-        const API_URL = "http://localhost:8000";
+        let API_URL = "http://localhost:8000";
         let token = null;
+
+        function updateApiUrl() {
+            API_URL = document.getElementById('api-env').value;
+            document.getElementById('current-url').innerText = API_URL;
+        }
 
         async function login() {
             const payload = {
