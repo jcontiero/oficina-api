@@ -18,7 +18,7 @@ spec:
       containers:
         - name: worker
           image: us-east1-docker.pkg.dev/pos-fiap-2026/oficina-docker/oficina-api:latest
-          command: ["uv", "run", "python", "-m", "src.worker"]
+          command: ["python", "-m", "src.worker"]
           envFrom:
             - configMapRef:
                 name: oficina-api-config
@@ -33,6 +33,12 @@ spec:
               value: "oficina-api-worker"
             - name: DD_VERSION
               value: "latest"
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_TRACE_AGENT_PORT
+              value: "8126"
             - name: PUBSUB_TOPIC_ID
               value: "oficina-notificacoes-topic"
           resources:
