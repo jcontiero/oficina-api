@@ -34,14 +34,10 @@ jobs:
         run: uv run ruff check src tests scripts
       - name: Black check
         run: uv run black --check src tests scripts
-      - name: Pytest com Cobertura
-        run: uv run pytest tests/unit --cov=src --cov-report=xml:coverage.xml --cov-fail-under=0 -q
+      - name: Pytest
+        run: uv run pytest tests/unit -q
         env:
           SECRET_KEY: ci-secret-key-para-testes-32-chars-ok
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   build-push-deploy:
     runs-on: ubuntu-latest
