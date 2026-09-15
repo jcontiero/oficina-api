@@ -1,7 +1,7 @@
 # Oficina Mecânica - API Principal
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jcontiero_oficina-api)](https://sonarcloud.io/summary/new_code?id=jcontiero_oficina-api)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jcontiero_oficina-api)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_oficina-api&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=jcontiero_oficina-api)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jcontiero_posfiaparch_fase01&token=b4911515593a102dd125f01015779211089bbd21)](https://sonarcloud.io/summary/new_code?id=jcontiero_posfiaparch_fase01)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_posfiaparch_fase01&metric=coverage&token=b4911515593a102dd125f01015779211089bbd21)](https://sonarcloud.io/summary/new_code?id=jcontiero_posfiaparch_fase01)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jcontiero_posfiaparch_fase01&metric=vulnerabilities&token=b4911515593a102dd125f01015779211089bbd21)](https://sonarcloud.io/summary/new_code?id=jcontiero_posfiaparch_fase01)
 
 
 ## Propósito
