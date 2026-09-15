@@ -15,3 +15,14 @@ env/
 .cline*
 .cursor*
 .DS_Store
+
+# Docs auxiliares (mantidos localmente, não versionados)
+docs/aux/
+docs/collection-postman.json
+docs/index.html
+docs/entrega-tech-challenge.md
+docs/plano-etapas-fase2.md
+docs/plano-implementacao-fase2.md
+docs/plano-implementacao-fase3.md
+docs/portabilidade-cloud.md
+docs/runbook-deploy-rollback.md
