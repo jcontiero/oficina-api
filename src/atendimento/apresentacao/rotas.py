@@ -21,8 +21,6 @@ from src.container import (
     get_adicionar_servico,
     get_adicionar_peca,
     get_gerar_orcamento,
-    get_aprovar_orcamento,
-    get_recusar_orcamento,
     get_executar_servico,
     get_finalizar_os,
     get_entregar_veiculo,
@@ -54,8 +52,6 @@ from src.atendimento.aplicacao.casos_de_uso import (
     AdicionarServico,
     AdicionarPeca,
     GerarOrcamento,
-    AprovarOrcamento,
-    RecusarOrcamento,
     ExecutarServico,
     FinalizarOS,
     EntregarVeiculo,
@@ -91,7 +87,6 @@ from src.atendimento.apresentacao.schemas import (
     FinalizarDiagnosticoRequest,
     AdicionarServicoRequest,
     AdicionarPecaRequest,
-    RecusarOrcamentoRequest,
     OsResponse,
     AcompanharOsResponse,
     ItensOsResponse,
@@ -289,6 +284,7 @@ def listar_os_fase2(
     principal: AuthDep,
 ):
     from src.identidade.dominio.entidades import ActorType
+
     cliente_id = principal.id if principal.actor_type == ActorType.CLIENTE else None
     ordens = caso_de_uso.executar(cliente_id=cliente_id)
     return [ListarOsFase2Response.from_domain(o) for o in ordens]
@@ -302,6 +298,7 @@ def buscar_os(
 ):
     try:
         from src.identidade.dominio.entidades import ActorType
+
         cliente_id = principal.id if principal.actor_type == ActorType.CLIENTE else None
 
         return OsResponse.from_domain(caso_de_uso.executar(id, cliente_id=cliente_id))
@@ -335,9 +332,13 @@ def aprovar_os_fase2(
     try:
         from src.identidade.dominio.entidades import ActorType
         from fastapi import HTTPException
-        if principal.actor_type == ActorType.FUNCIONARIO and principal.perfil != "ADMIN":
+
+        if (
+            principal.actor_type == ActorType.FUNCIONARIO
+            and principal.perfil != "ADMIN"
+        ):
             raise HTTPException(403, "Acesso restrito")
-            
+
         cliente_id = principal.id if principal.actor_type == ActorType.CLIENTE else None
         os = caso_de_uso.executar(id, body.aprovado, body.motivo, cliente_id=cliente_id)
         return OsResponse.from_domain(os)

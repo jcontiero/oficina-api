@@ -18,7 +18,6 @@ class CadastrarPeca:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         nome: str,
@@ -68,7 +67,6 @@ class AtualizarPeca:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         id: UUID,
@@ -92,14 +90,18 @@ class AtualizarPeca:
 
 
 class ReporEstoque:
-    def __init__(self, repo: PecaRepositorio, notificador: NotificadorEstoque, uow: UnitOfWork | None = None):
+    def __init__(
+        self,
+        repo: PecaRepositorio,
+        notificador: NotificadorEstoque,
+        uow: UnitOfWork | None = None,
+    ):
         self.repo = repo
         self.notificador = notificador
 
         self.uow = uow
 
     @transactional
-
     def executar(self, id: UUID, quantidade: int) -> Peca:
         peca = self.repo.buscar_por_id(id)
         if not peca:
@@ -146,7 +148,6 @@ class RemoverPeca:
         self.uow = uow
 
     @transactional
-
     def executar(self, id: UUID) -> None:
         if not self.repo.buscar_por_id(id):
             raise PecaNaoEncontradaError(id)

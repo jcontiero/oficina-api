@@ -1,9 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jwt.exceptions import PyJWTError
 
-from src.container import get_token_provider
-from src.identidade.aplicacao.ports import ProvedorToken
 from src.identidade.dominio.entidades import Principal
 
 security = HTTPBearer()
@@ -14,23 +11,21 @@ def get_usuario_atual(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> Principal:
     import jwt
-    from fastapi import Request
-    from src.container import get_token_provider, get_token_provider_cliente
-    
+
     token = credentials.credentials
     try:
         unverified = jwt.decode(token, options={"verify_signature": False})
         actor_type = unverified.get("actor_type")
-        
+
         # Obter dependências do FastAPI container manualmente ou via Request.
         # Mas para simplificar, usaremos as funções get_ do container diretamente.
-        
+
         container = request.app.state.container
         if actor_type == "CLIENTE":
             provider = container.token_provider_cliente
         else:
             provider = container.token_provider
-            
+
         return provider.decodificar(token)
     except (jwt.PyJWTError, ValueError) as e:
         msg = str(e)

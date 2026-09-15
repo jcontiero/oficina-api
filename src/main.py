@@ -23,24 +23,42 @@ from src.atendimento.dominio.excecoes import (
     OrdemDeServicoNaoEncontradaError,
     TokenDeAprovacaoInvalidoError,
     TokenDeAprovacaoExpiradoError,
-    DocumentoClienteInvalidoError
+    DocumentoClienteInvalidoError,
 )
 from src.estoque.dominio.excecoes import (
     EstoqueInsuficienteError,
     PecaNaoEncontradaError,
     CodigoPecaDuplicadoError,
-    ReposicaoInvalidaError
+    ReposicaoInvalidaError,
 )
-from src.catalogo.dominio.excecoes import (
-    ServicoNaoEncontradoError,
-    ServicoEmUsoError
-)
+from src.catalogo.dominio.excecoes import ServicoNaoEncontradoError, ServicoEmUsoError
 from src.shared.excecoes_http import (
     handler_credenciais_invalidas,
     handler_regra_negocio,
     handler_nao_encontrado,
     handler_conflito,
 )
+
+
+import logging
+from pythonjsonlogger import jsonlogger
+from ddtrace import patch_all
+
+# Aplica patches em bibliotecas padrão (FastAPI, SQLAlchemy, Logging, etc)
+patch_all()
+
+# Configura o logger raiz para usar JSON e injetar o Trace ID
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logHandler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter(
+    "%(asctime)s %(levelname)s %(name)s %(message)s dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s",
+    rename_fields={"levelname": "level", "asctime": "timestamp"},
+)
+logHandler.setFormatter(formatter)
+logger.addHandler(logHandler)
+# Evita logs duplicados no uvicorn se ele criar seus próprios handlers
+logger.propagate = False
 
 
 def criar_app(configuracoes=None) -> FastAPI:
@@ -74,6 +92,7 @@ def criar_app(configuracoes=None) -> FastAPI:
     def readiness_check():
         from sqlalchemy import text
         from fastapi import HTTPException, status
+
         try:
             with app.state.container.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
@@ -81,11 +100,11 @@ def criar_app(configuracoes=None) -> FastAPI:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Database unreachable: {str(e)}"
+                detail=f"Database unreachable: {str(e)}",
             )
 
     app.add_exception_handler(CredenciaisInvalidasError, handler_credenciais_invalidas)
-    
+
     # Atendimento - Regra de Negocio
     app.add_exception_handler(TransicaoDeStatusInvalidaError, handler_regra_negocio)
     app.add_exception_handler(TransicaoInvalidaError, handler_regra_negocio)
@@ -95,27 +114,31 @@ def criar_app(configuracoes=None) -> FastAPI:
     app.add_exception_handler(VeiculoComOsAtivaError, handler_regra_negocio)
     app.add_exception_handler(ClienteComOsAtivaError, handler_regra_negocio)
     app.add_exception_handler(DocumentoClienteInvalidoError, handler_regra_negocio)
-    
+
     # Atendimento - Nao Encontrado
     app.add_exception_handler(ClienteNaoEncontradoError, handler_nao_encontrado)
     app.add_exception_handler(VeiculoNaoEncontradoError, handler_nao_encontrado)
     app.add_exception_handler(OrdemDeServicoNaoEncontradaError, handler_nao_encontrado)
     app.add_exception_handler(ItemNaoEncontradoError, handler_nao_encontrado)
-    
+
     # Atendimento - Conflito
     app.add_exception_handler(DocumentoDuplicadoError, handler_conflito)
     app.add_exception_handler(PlacaDuplicadaError, handler_conflito)
-    
+
     # Atendimento - Auth
-    app.add_exception_handler(TokenDeAprovacaoInvalidoError, handler_credenciais_invalidas)
-    app.add_exception_handler(TokenDeAprovacaoExpiradoError, handler_credenciais_invalidas)
-    
+    app.add_exception_handler(
+        TokenDeAprovacaoInvalidoError, handler_credenciais_invalidas
+    )
+    app.add_exception_handler(
+        TokenDeAprovacaoExpiradoError, handler_credenciais_invalidas
+    )
+
     # Estoque
     app.add_exception_handler(EstoqueInsuficienteError, handler_regra_negocio)
     app.add_exception_handler(ReposicaoInvalidaError, handler_regra_negocio)
     app.add_exception_handler(PecaNaoEncontradaError, handler_nao_encontrado)
     app.add_exception_handler(CodigoPecaDuplicadoError, handler_conflito)
-    
+
     # Catalogo
     app.add_exception_handler(ServicoNaoEncontradoError, handler_nao_encontrado)
     app.add_exception_handler(ServicoEmUsoError, handler_conflito)

@@ -13,7 +13,6 @@ class CadastrarServico:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         nome: str,
@@ -57,7 +56,6 @@ class AtualizarServico:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         id: UUID,
@@ -87,7 +85,6 @@ class RemoverServico:
         self.uow = uow
 
     @transactional
-
     def executar(self, id: UUID) -> None:
         servico = self.repo.buscar_por_id(id)
         if not servico:

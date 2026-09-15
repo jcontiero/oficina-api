@@ -24,7 +24,7 @@ class JwtTokenProvider(ProvedorToken):
         payload["iss"] = "oficina-api-admin"
         payload["aud"] = "oficina-api"
         payload["actor_type"] = ActorType.FUNCIONARIO.value
-        
+
         return jwt.encode(
             payload, self.config.secret_key, algorithm=self.config.algorithm
         )
@@ -32,21 +32,21 @@ class JwtTokenProvider(ProvedorToken):
     def decodificar(self, token: str) -> Principal:
         try:
             payload = jwt.decode(
-                token, 
-                self.config.secret_key, 
+                token,
+                self.config.secret_key,
                 algorithms=[self.config.algorithm],
                 audience="oficina-api",
-                issuer="oficina-api-admin"
+                issuer="oficina-api-admin",
             )
-            
+
             actor = payload.get("actor_type")
             if not actor or actor != ActorType.FUNCIONARIO.value:
                 raise ValueError("Token não possui actor_type=FUNCIONARIO")
-                
+
             return Principal(
                 id=UUID(payload["sub"]),
                 actor_type=ActorType.FUNCIONARIO,
-                perfil=payload.get("perfil")
+                perfil=payload.get("perfil"),
             )
         except jwt.PyJWTError as e:
             raise jwt.PyJWTError(str(e))

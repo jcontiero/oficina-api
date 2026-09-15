@@ -13,7 +13,10 @@ class Peca:
     quantidade_minima_alerta: int
 
     def reservar(self, quantidade: int) -> None:
-        from src.estoque.dominio.excecoes import EstoqueInsuficienteError, ReposicaoInvalidaError
+        from src.estoque.dominio.excecoes import (
+            EstoqueInsuficienteError,
+            ReposicaoInvalidaError,
+        )
 
         if quantidade <= 0:
             raise ReposicaoInvalidaError()
@@ -33,7 +36,7 @@ class Peca:
 
     def liberar_reserva(self, quantidade: int) -> None:
         from src.estoque.dominio.excecoes import ReposicaoInvalidaError
-        
+
         if quantidade <= 0:
             raise ReposicaoInvalidaError()
         self.quantidade_disponivel += quantidade

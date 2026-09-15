@@ -33,9 +33,13 @@ class PecaRepositorioImpl(PecaRepositorio):
         modelo = self.db.get(PecaModel, id)
         return self._para_entidade(modelo) if modelo else None
 
-    
     def buscar_por_id_com_lock(self, id: UUID) -> Peca | None:
-        modelo = self.db.query(PecaModel).filter(PecaModel.id == id).with_for_update().first()
+        modelo = (
+            self.db.query(PecaModel)
+            .filter(PecaModel.id == id)
+            .with_for_update()
+            .first()
+        )
         return self._para_entidade(modelo) if modelo else None
 
     def buscar_por_codigo(self, codigo: str) -> Peca | None:

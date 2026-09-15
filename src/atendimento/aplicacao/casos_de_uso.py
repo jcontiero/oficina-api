@@ -31,7 +31,6 @@ class CadastrarCliente:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         nome: str,
@@ -85,7 +84,6 @@ class AtualizarCliente:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         id: UUID,
@@ -106,14 +104,18 @@ class AtualizarCliente:
 
 
 class RemoverCliente:
-    def __init__(self, repo: ClienteRepositorio, os_repo: OrdemDeServicoRepositorio, uow: UnitOfWork | None = None):
+    def __init__(
+        self,
+        repo: ClienteRepositorio,
+        os_repo: OrdemDeServicoRepositorio,
+        uow: UnitOfWork | None = None,
+    ):
         self.repo = repo
         self.os_repo = os_repo
 
         self.uow = uow
 
     @transactional
-
     def executar(self, id: UUID) -> None:
         cliente = self.repo.buscar_por_id(id)
         if not cliente:
@@ -128,14 +130,18 @@ class RemoverCliente:
 
 
 class CadastrarVeiculo:
-    def __init__(self, repo: VeiculoRepositorio, cliente_repo: ClienteRepositorio, uow: UnitOfWork | None = None):
+    def __init__(
+        self,
+        repo: VeiculoRepositorio,
+        cliente_repo: ClienteRepositorio,
+        uow: UnitOfWork | None = None,
+    ):
         self.repo = repo
         self.cliente_repo = cliente_repo
 
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         cliente_id: UUID,
@@ -188,7 +194,6 @@ class AtualizarVeiculo:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         id: UUID,
@@ -212,22 +217,25 @@ class AtualizarVeiculo:
 
 
 class RemoverVeiculo:
-    def __init__(self, repo: VeiculoRepositorio, os_repo: OrdemDeServicoRepositorio, uow: UnitOfWork | None = None):
+    def __init__(
+        self,
+        repo: VeiculoRepositorio,
+        os_repo: OrdemDeServicoRepositorio,
+        uow: UnitOfWork | None = None,
+    ):
         self.repo = repo
         self.os_repo = os_repo
 
         self.uow = uow
 
     @transactional
-
     def executar(self, id: UUID) -> None:
         veiculo = self.repo.buscar_por_id(id)
         if not veiculo:
             raise VeiculoNaoEncontradoError(str(id))
         if self.os_repo.buscar_ativa_por_veiculo(id):
             raise VeiculoComOsAtivaError(veiculo.placa.valor)
-        cliente.inativar()
-        self.repo.salvar(cliente)
+        self.repo.remover(id)
 
 
 # -- Ordens de Serviço ---------------------------------------------------------
@@ -238,7 +246,8 @@ class AbrirOrdemDeServico:
         self,
         os_repo: OrdemDeServicoRepositorio,
         cliente_repo: ClienteRepositorio,
-        veiculo_repo: VeiculoRepositorio, uow: UnitOfWork | None = None,
+        veiculo_repo: VeiculoRepositorio,
+        uow: UnitOfWork | None = None,
     ):
         self.os_repo = os_repo
         self.cliente_repo = cliente_repo
@@ -247,7 +256,6 @@ class AbrirOrdemDeServico:
         self.uow = uow
 
     @transactional
-
     def executar(
         self, cliente_cpf_cnpj: str, veiculo_placa: str, descricao_problema: str
     ) -> OrdemDeServico:
@@ -304,7 +312,6 @@ class IniciarDiagnostico:
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID) -> OrdemDeServico:
         os = self._buscar(os_id)
         os.iniciar_diagnostico()
@@ -323,7 +330,8 @@ class FinalizarDiagnostico:
         repo: OrdemDeServicoRepositorio,
         veiculo_repo: VeiculoRepositorio,
         cliente_repo: ClienteRepositorio,
-        notificador: Notificador, uow: UnitOfWork | None = None,
+        notificador: Notificador,
+        uow: UnitOfWork | None = None,
     ):
         self.repo = repo
         self.veiculo_repo = veiculo_repo
@@ -333,7 +341,6 @@ class FinalizarDiagnostico:
         self.uow = uow
 
     @transactional
-
     def executar(
         self, os_id: UUID, laudo_diagnostico: str | None = None
     ) -> OrdemDeServico:
@@ -354,14 +361,18 @@ class FinalizarDiagnostico:
 
 
 class AdicionarServico:
-    def __init__(self, repo: OrdemDeServicoRepositorio, servico_repo, uow: UnitOfWork | None = None):
+    def __init__(
+        self,
+        repo: OrdemDeServicoRepositorio,
+        servico_repo,
+        uow: UnitOfWork | None = None,
+    ):
         self.repo = repo
         self.servico_repo = servico_repo
 
         self.uow = uow
 
     @transactional
-
     def executar(
         self, os_id: UUID, servico_id: UUID, observacao: str = ""
     ) -> OrdemDeServico:
@@ -378,14 +389,15 @@ class AdicionarServico:
 
 
 class AdicionarPeca:
-    def __init__(self, repo: OrdemDeServicoRepositorio, peca_repo, uow: UnitOfWork | None = None):
+    def __init__(
+        self, repo: OrdemDeServicoRepositorio, peca_repo, uow: UnitOfWork | None = None
+    ):
         self.repo = repo
         self.peca_repo = peca_repo
 
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID, peca_id: UUID, quantidade: int) -> OrdemDeServico:
         from src.estoque.dominio.excecoes import PecaNaoEncontradaError
 
@@ -405,7 +417,8 @@ class GerarOrcamento:
         repo: OrdemDeServicoRepositorio,
         cliente_repo: ClienteRepositorio,
         veiculo_repo: VeiculoRepositorio,
-        notificador: Notificador, uow: UnitOfWork | None = None,
+        notificador: Notificador,
+        uow: UnitOfWork | None = None,
     ):
         self.repo = repo
         self.cliente_repo = cliente_repo
@@ -415,7 +428,6 @@ class GerarOrcamento:
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID) -> OrdemDeServico:
         os = self.repo.buscar_por_id(os_id)
         if not os:
@@ -449,14 +461,18 @@ class GerarOrcamento:
 
 
 class AprovarOrcamento:
-    def __init__(self, repo: OrdemDeServicoRepositorio, uow: UnitOfWork | None = None, peca_repo=None):
+    def __init__(
+        self,
+        repo: OrdemDeServicoRepositorio,
+        uow: UnitOfWork | None = None,
+        peca_repo=None,
+    ):
         self.repo = repo
         self.peca_repo = peca_repo
 
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID) -> OrdemDeServico:
         os = self.repo.buscar_por_id(os_id)
         if not os:
@@ -477,7 +493,8 @@ class RecusarOrcamento:
         repo: OrdemDeServicoRepositorio,
         cliente_repo: ClienteRepositorio,
         veiculo_repo: VeiculoRepositorio,
-        notificador: Notificador, uow: UnitOfWork | None = None,
+        notificador: Notificador,
+        uow: UnitOfWork | None = None,
     ):
         self.repo = repo
         self.cliente_repo = cliente_repo
@@ -487,7 +504,6 @@ class RecusarOrcamento:
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID, motivo: str = "") -> OrdemDeServico:
         os = self.repo.buscar_por_id(os_id)
         if not os:
@@ -512,7 +528,8 @@ class ExecutarServico:
         self,
         repo: OrdemDeServicoRepositorio,
         veiculo_repo: VeiculoRepositorio,
-        notificador: Notificador, uow: UnitOfWork | None = None,
+        notificador: Notificador,
+        uow: UnitOfWork | None = None,
     ):
         self.repo = repo
         self.veiculo_repo = veiculo_repo
@@ -521,7 +538,6 @@ class ExecutarServico:
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID, item_id: UUID) -> OrdemDeServico:
         os = self.repo.buscar_por_id(os_id)
         if not os:
@@ -556,7 +572,8 @@ class FinalizarOS:
         repo: OrdemDeServicoRepositorio,
         cliente_repo: ClienteRepositorio,
         veiculo_repo: VeiculoRepositorio,
-        notificador: Notificador, uow: UnitOfWork | None = None,
+        notificador: Notificador,
+        uow: UnitOfWork | None = None,
     ):
         self.repo = repo
         self.cliente_repo = cliente_repo
@@ -566,7 +583,6 @@ class FinalizarOS:
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID) -> OrdemDeServico:
         os = self.repo.buscar_por_id(os_id)
         if not os:
@@ -594,7 +610,6 @@ class EntregarVeiculo:
         self.uow = uow
 
     @transactional
-
     def executar(self, os_id: UUID) -> OrdemDeServico:
         os = self.repo.buscar_por_id(os_id)
         if not os:
@@ -613,7 +628,8 @@ class AbrirOrdemDeServicoUnificada:
         cliente_repo: ClienteRepositorio,
         veiculo_repo: VeiculoRepositorio,
         servico_repo,
-        peca_repo, uow: UnitOfWork | None = None,
+        peca_repo,
+        uow: UnitOfWork | None = None,
     ):
         self.os_repo = os_repo
         self.cliente_repo = cliente_repo
@@ -624,7 +640,6 @@ class AbrirOrdemDeServicoUnificada:
         self.uow = uow
 
     @transactional
-
     def executar(
         self,
         cliente_dados: dict,
@@ -746,7 +761,8 @@ class ProcessarAprovacaoOrcamento:
     def __init__(
         self,
         repo: OrdemDeServicoRepositorio,
-        uow: UnitOfWork | None = None, peca_repo=None,
+        uow: UnitOfWork | None = None,
+        peca_repo=None,
     ):
         self.repo = repo
         self.peca_repo = peca_repo
@@ -754,14 +770,19 @@ class ProcessarAprovacaoOrcamento:
         self.uow = uow
 
     @transactional
-
-    def executar(self, os_id: UUID, aprovado: bool, motivo: str = "", cliente_id: UUID | None = None) -> OrdemDeServico:
+    def executar(
+        self,
+        os_id: UUID,
+        aprovado: bool,
+        motivo: str = "",
+        cliente_id: UUID | None = None,
+    ) -> OrdemDeServico:
         from src.atendimento.dominio.value_objects import StatusOS
-        
+
         os = self.repo.buscar_por_id(os_id)
         if not os or (cliente_id and os.cliente_id != cliente_id):
             raise OrdemDeServicoNaoEncontradaError(str(os_id))
-            
+
         if aprovado and os.status == StatusOS.EM_EXECUCAO:
             return os
         if not aprovado and os.status == StatusOS.EM_DIAGNOSTICO:
@@ -777,7 +798,7 @@ class ProcessarAprovacaoOrcamento:
                         self.peca_repo.salvar(peca)
         else:
             os.recusar_orcamento()
-            
+
         return self.repo.salvar(os)
 
 
@@ -816,7 +837,8 @@ class AtualizarStatusViaWebhook:
     def __init__(
         self,
         repo: OrdemDeServicoRepositorio,
-        token_provider: ProvedorToken, uow: UnitOfWork | None = None,
+        token_provider: ProvedorToken,
+        uow: UnitOfWork | None = None,
     ):
         self.repo = repo
         self.token_provider = token_provider
@@ -824,7 +846,6 @@ class AtualizarStatusViaWebhook:
         self.uow = uow
 
     @transactional
-
     def executar(
         self, os_id: UUID, token: str, novo_status: StatusOS
     ) -> OrdemDeServico:

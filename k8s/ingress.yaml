@@ -3,7 +3,6 @@
 # kind: Ingress
 # metadata:
 #   name: oficina-api-ingress
-#   namespace: oficina-api
 #   labels:
 #     app: oficina-api
 #     tier: api

@@ -9,7 +9,8 @@ from src.atendimento.dominio.value_objects import (
     CPF,
     CNPJ,
     Placa,
-    StatusCliente, StatusVeiculo,
+    StatusCliente,
+    StatusVeiculo,
 )
 from src.atendimento.dominio.excecoes import (
     TransicaoInvalidaError,
@@ -30,6 +31,7 @@ class Cliente:
 
     status: StatusCliente = StatusCliente.ATIVO
     status: StatusCliente = StatusCliente.ATIVO
+
     def __post_init__(self):
         tem_cpf = self.cpf is not None
         tem_cnpj = self.cnpj is not None
@@ -41,7 +43,6 @@ class Cliente:
 
     def ativar(self) -> None:
         self.status = StatusCliente.ATIVO
-
 
 
 @dataclass
@@ -86,7 +87,6 @@ class ItemPeca:
         return self.preco_unitario * self.quantidade
 
 
-
 @dataclass
 class HistoricoOS:
     id: UUID
@@ -97,6 +97,7 @@ class HistoricoOS:
     sequencia: int
 
     origem: str
+
 
 @dataclass
 class OrdemDeServico:
@@ -122,10 +123,9 @@ class OrdemDeServico:
                 status_novo=self.status,
                 ocorrido_em=self.criada_em,
                 sequencia=1,
-                origem="API"
+                origem="API",
             )
             self.historico.append(hist)
-
 
     def iniciar_diagnostico(self) -> None:
         self._transicionar_para(StatusOS.EM_DIAGNOSTICO)
@@ -207,11 +207,10 @@ class OrdemDeServico:
     def entregar(self) -> None:
         self._transicionar_para(StatusOS.ENTREGUE)
 
-
     def _transicionar_para(self, novo_status: StatusOS, origem: str = "API") -> None:
         if novo_status not in TRANSICOES_VALIDAS[self.status]:
             raise TransicaoInvalidaError(self.status, novo_status)
-            
+
         hist = HistoricoOS(
             id=uuid4(),
             os_id=self.id,
@@ -219,9 +218,9 @@ class OrdemDeServico:
             status_novo=novo_status,
             ocorrido_em=datetime.now(timezone.utc),
             origem=origem,
-            sequencia=len(self.historico) + 1
+            sequencia=len(self.historico) + 1,
         )
         self.historico.append(hist)
-        
+
         self.status = novo_status
         self.atualizada_em = datetime.now(timezone.utc)

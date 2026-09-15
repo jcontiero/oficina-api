@@ -142,7 +142,6 @@ class OrdemDeServicoModel(Base):
     )
 
 
-
 class HistoricoOSModel(Base):
     __tablename__ = "historico_os"
 
@@ -159,7 +158,9 @@ class HistoricoOSModel(Base):
         SAEnum(StatusOS, name="status_os", native_enum=False), nullable=False
     )
     ocorrido_em: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
     )
     sequencia: Mapped[int] = mapped_column(nullable=False)
     origem: Mapped[str] = mapped_column(String(50), nullable=False)

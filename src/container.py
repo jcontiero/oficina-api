@@ -13,8 +13,6 @@ from src.identidade.aplicacao.ports import ProvedorHashSenha, ProvedorToken
 from src.identidade.infraestrutura.bcrypt_provider import BcryptHashProvider
 from src.identidade.infraestrutura.jwt_provider import JwtTokenProvider
 from src.identidade.infraestrutura.jwt_cliente_provider import JwtTokenProviderCliente
-from src.identidade.infraestrutura.jwt_cliente_provider import JwtTokenProviderCliente
-from src.identidade.infraestrutura.jwt_cliente_provider import JwtTokenProviderCliente
 from src.identidade.infraestrutura.repositorios import UsuarioRepositorioImpl
 
 from src.atendimento.aplicacao.casos_de_uso import (
@@ -90,7 +88,9 @@ class Container:
         )
 
         self.token_provider: ProvedorToken = JwtTokenProvider(self.config)
-        self.token_provider_cliente: ProvedorToken = JwtTokenProviderCliente(self.config)
+        self.token_provider_cliente: ProvedorToken = JwtTokenProviderCliente(
+            self.config
+        )
         self.hash_provider: ProvedorHashSenha = BcryptHashProvider()
         self.notificador: Notificador = SmtpNotificador(self.config)
         self.notificador_estoque: NotificadorEstoque = SmtpNotificador(self.config)
@@ -115,8 +115,10 @@ def _get_session(
 
 DBDep = Annotated[Session, Depends(_get_session)]
 
+
 def get_uow(db: DBDep) -> UnitOfWork:
     return SQLAlchemyUnitOfWork(db)
+
 
 UowDep = Annotated[UnitOfWork, Depends(get_uow)]
 
@@ -124,7 +126,10 @@ UowDep = Annotated[UnitOfWork, Depends(get_uow)]
 def get_token_provider(container: Container = Depends(_get_container)) -> ProvedorToken:
     return container.token_provider
 
-def get_token_provider_cliente(container: Container = Depends(_get_container)) -> ProvedorToken:
+
+def get_token_provider_cliente(
+    container: Container = Depends(_get_container),
+) -> ProvedorToken:
     return container.token_provider_cliente
 
 
@@ -165,9 +170,12 @@ def get_autenticar_usuario(
 
 def get_criar_usuario(
     db: DBDep,
-    hash_provider: Annotated[ProvedorHashSenha, Depends(get_hash_provider)], uow: UowDep,
+    hash_provider: Annotated[ProvedorHashSenha, Depends(get_hash_provider)],
+    uow: UowDep,
 ) -> CriarUsuario:
-    return CriarUsuario(repo=UsuarioRepositorioImpl(db), hash_provider=hash_provider, uow=uow)
+    return CriarUsuario(
+        repo=UsuarioRepositorioImpl(db), hash_provider=hash_provider, uow=uow
+    )
 
 
 # -- Clientes ------------------------------------------------------------------
@@ -191,9 +199,8 @@ def get_atualizar_cliente(db: DBDep, uow: UowDep) -> AtualizarCliente:
 
 def get_remover_cliente(db: DBDep, uow: UowDep) -> RemoverCliente:
     return RemoverCliente(
-        ClienteRepositorioImpl(db),
-        OrdemDeServicoRepositorioImpl(db),
-     uow=uow)
+        ClienteRepositorioImpl(db), OrdemDeServicoRepositorioImpl(db), uow=uow
+    )
 
 
 # -- Veículos ------------------------------------------------------------------
@@ -201,9 +208,8 @@ def get_remover_cliente(db: DBDep, uow: UowDep) -> RemoverCliente:
 
 def get_cadastrar_veiculo(db: DBDep, uow: UowDep) -> CadastrarVeiculo:
     return CadastrarVeiculo(
-        VeiculoRepositorioImpl(db),
-        ClienteRepositorioImpl(db),
-     uow=uow)
+        VeiculoRepositorioImpl(db), ClienteRepositorioImpl(db), uow=uow
+    )
 
 
 def get_listar_veiculos(db: DBDep) -> ListarVeiculos:
@@ -220,9 +226,8 @@ def get_atualizar_veiculo(db: DBDep, uow: UowDep) -> AtualizarVeiculo:
 
 def get_remover_veiculo(db: DBDep, uow: UowDep) -> RemoverVeiculo:
     return RemoverVeiculo(
-        VeiculoRepositorioImpl(db),
-        OrdemDeServicoRepositorioImpl(db),
-     uow=uow)
+        VeiculoRepositorioImpl(db), OrdemDeServicoRepositorioImpl(db), uow=uow
+    )
 
 
 # -- Ordens de Serviço ---------------------------------------------------------
@@ -233,7 +238,8 @@ def get_abrir_ordem_de_servico(db: DBDep, uow: UowDep) -> AbrirOrdemDeServico:
         OrdemDeServicoRepositorioImpl(db),
         ClienteRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_listar_ordens_de_servico(db: DBDep) -> ListarOrdensDeServico:
@@ -250,96 +256,106 @@ def get_iniciar_diagnostico(db: DBDep, uow: UowDep) -> IniciarDiagnostico:
 
 def get_finalizar_diagnostico(
     db: DBDep,
-    notificador: Annotated[Notificador, Depends(get_notificador)], uow: UowDep,
+    notificador: Annotated[Notificador, Depends(get_notificador)],
+    uow: UowDep,
 ) -> FinalizarDiagnostico:
     return FinalizarDiagnostico(
         OrdemDeServicoRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
         ClienteRepositorioImpl(db),
         notificador,
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_adicionar_servico(db: DBDep, uow: UowDep) -> AdicionarServico:
     return AdicionarServico(
-        OrdemDeServicoRepositorioImpl(db),
-        ServicoRepositorioImpl(db),
-     uow=uow)
+        OrdemDeServicoRepositorioImpl(db), ServicoRepositorioImpl(db), uow=uow
+    )
 
 
 def get_adicionar_peca(db: DBDep, uow: UowDep) -> AdicionarPeca:
     return AdicionarPeca(
-        OrdemDeServicoRepositorioImpl(db),
-        PecaRepositorioImpl(db),
-     uow=uow)
+        OrdemDeServicoRepositorioImpl(db), PecaRepositorioImpl(db), uow=uow
+    )
 
 
 def get_gerar_orcamento(
     db: DBDep,
-    notificador: Annotated[Notificador, Depends(get_notificador)], uow: UowDep,
+    notificador: Annotated[Notificador, Depends(get_notificador)],
+    uow: UowDep,
 ) -> GerarOrcamento:
     return GerarOrcamento(
         OrdemDeServicoRepositorioImpl(db),
         ClienteRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
         notificador,
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_aprovar_orcamento(db: DBDep, uow: UowDep) -> AprovarOrcamento:
     return AprovarOrcamento(
-        OrdemDeServicoRepositorioImpl(db),
-        PecaRepositorioImpl(db),
-     uow=uow)
+        OrdemDeServicoRepositorioImpl(db), PecaRepositorioImpl(db), uow=uow
+    )
 
 
 def get_recusar_orcamento(
     db: DBDep,
-    notificador: Annotated[Notificador, Depends(get_notificador)], uow: UowDep,
+    notificador: Annotated[Notificador, Depends(get_notificador)],
+    uow: UowDep,
 ) -> RecusarOrcamento:
     return RecusarOrcamento(
         OrdemDeServicoRepositorioImpl(db),
         ClienteRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
         notificador,
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_executar_servico(
     db: DBDep,
-    notificador: Annotated[Notificador, Depends(get_notificador)], uow: UowDep,
+    notificador: Annotated[Notificador, Depends(get_notificador)],
+    uow: UowDep,
 ) -> ExecutarServico:
     return ExecutarServico(
         OrdemDeServicoRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
         notificador,
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_finalizar_os(
     db: DBDep,
-    notificador: Annotated[Notificador, Depends(get_notificador)], uow: UowDep,
+    notificador: Annotated[Notificador, Depends(get_notificador)],
+    uow: UowDep,
 ) -> FinalizarOS:
     return FinalizarOS(
         OrdemDeServicoRepositorioImpl(db),
         ClienteRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
         notificador,
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_entregar_veiculo(db: DBDep, uow: UowDep) -> EntregarVeiculo:
     return EntregarVeiculo(OrdemDeServicoRepositorioImpl(db), uow=uow)
 
 
-def get_abrir_ordem_de_servico_unificada(db: DBDep, uow: UowDep) -> AbrirOrdemDeServicoUnificada:
+def get_abrir_ordem_de_servico_unificada(
+    db: DBDep, uow: UowDep
+) -> AbrirOrdemDeServicoUnificada:
     return AbrirOrdemDeServicoUnificada(
         OrdemDeServicoRepositorioImpl(db),
         ClienteRepositorioImpl(db),
         VeiculoRepositorioImpl(db),
         ServicoRepositorioImpl(db),
         PecaRepositorioImpl(db),
-     uow=uow)
+        uow=uow,
+    )
 
 
 def get_consultar_status_ordem_de_servico(
@@ -353,9 +369,8 @@ def get_processar_aprovacao_orcamento(
     uow: UowDep,
 ) -> ProcessarAprovacaoOrcamento:
     return ProcessarAprovacaoOrcamento(
-        OrdemDeServicoRepositorioImpl(db),
-        PecaRepositorioImpl(db),
-     uow=uow)
+        OrdemDeServicoRepositorioImpl(db), PecaRepositorioImpl(db), uow=uow
+    )
 
 
 def get_listar_ordens_de_servico_ativas(
@@ -366,12 +381,12 @@ def get_listar_ordens_de_servico_ativas(
 
 def get_atualizar_status_via_webhook(
     db: DBDep,
-    token_provider: Annotated[ProvedorToken, Depends(get_token_provider)], uow: UowDep,
+    token_provider: Annotated[ProvedorToken, Depends(get_token_provider)],
+    uow: UowDep,
 ) -> AtualizarStatusViaWebhook:
     return AtualizarStatusViaWebhook(
-        OrdemDeServicoRepositorioImpl(db),
-        token_provider,
-     uow=uow)
+        OrdemDeServicoRepositorioImpl(db), token_provider, uow=uow
+    )
 
 
 # -- Catálogo ------------------------------------------------------------------
@@ -418,7 +433,8 @@ def get_atualizar_peca(db: DBDep, uow: UowDep) -> AtualizarPeca:
 
 def get_repor_estoque(
     db: DBDep,
-    notificador: Annotated[NotificadorEstoque, Depends(get_notificador_estoque)], uow: UowDep,
+    notificador: Annotated[NotificadorEstoque, Depends(get_notificador_estoque)],
+    uow: UowDep,
 ) -> ReporEstoque:
     return ReporEstoque(PecaRepositorioImpl(db), notificador, uow=uow)
 

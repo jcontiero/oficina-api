@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oficina-api-worker
+  labels:
+    app: oficina-api-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oficina-api-worker
+  template:
+    metadata:
+      labels:
+        app: oficina-api-worker
+    spec:
+      containers:
+        - name: worker
+          image: us-east1-docker.pkg.dev/pos-fiap-2026/oficina-repo/oficina-api:latest
+          command: ["uv", "run", "python", "-m", "src.worker"]
+          envFrom:
+            - configMapRef:
+                name: oficina-api-config
+            - secretRef:
+                name: oficina-api-secret
+          env:
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: DD_SERVICE
+              value: "oficina-api-worker"
+            - name: DD_VERSION
+              value: "latest"
+            - name: PUBSUB_TOPIC_ID
+              value: "oficina-notificacoes-topic"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

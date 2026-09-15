@@ -87,7 +87,11 @@ def test_fluxo_completo_da_os(client, headers_admin, setup_base):
     assert os["status"] == "AGUARDANDO_APROVACAO"
 
     # 2. Aprovar orçamento (rota antiga ainda disponível)
-    os = client.post(f"/ordens-de-servico/{os_id}/aprovacao", json={"aprovado": True}, headers=headers_admin).json()
+    os = client.post(
+        f"/ordens-de-servico/{os_id}/aprovacao",
+        json={"aprovado": True},
+        headers=headers_admin,
+    ).json()
     assert os["status"] == "EM_EXECUCAO"
 
     # 3. Executar serviço
@@ -148,7 +152,8 @@ def test_aprovacao_os_fase2(client, headers_admin, setup_base):
 
     resposta = client.post(
         f"/ordens-de-servico/{os_id}/aprovacao",
-        json={"aprovado": True}, headers=headers_admin,
+        json={"aprovado": True},
+        headers=headers_admin,
     )
     assert resposta.status_code == 200
     assert resposta.json()["status"] == "EM_EXECUCAO"
@@ -163,7 +168,8 @@ def test_recusa_os_fase2_volta_para_diagnostico(client, headers_admin, setup_bas
 
     resposta = client.post(
         f"/ordens-de-servico/{os_id}/aprovacao",
-        json={"aprovado": False, "motivo": "Valor alto"}, headers=headers_admin,
+        json={"aprovado": False, "motivo": "Valor alto"},
+        headers=headers_admin,
     )
     assert resposta.status_code == 200
     assert resposta.json()["status"] == "EM_DIAGNOSTICO"
@@ -304,7 +310,11 @@ def test_aprovar_orcamento_reserva_estoque(client, headers_admin, setup_base):
     os = client.post("/ordens-de-servico", json=payload, headers=headers_admin).json()
     os_id = os["id"]
 
-    client.post(f"/ordens-de-servico/{os_id}/aprovacao", json={"aprovado": True}, headers=headers_admin)
+    client.post(
+        f"/ordens-de-servico/{os_id}/aprovacao",
+        json={"aprovado": True},
+        headers=headers_admin,
+    )
 
     estoque_apos_aprovacao = client.get(
         f"/pecas/{peca['id']}", headers=headers_admin
@@ -336,7 +346,11 @@ def test_aprovar_orcamento_sem_estoque_retorna_422(client, headers_admin, setup_
     os = client.post("/ordens-de-servico", json=payload, headers=headers_admin).json()
     os_id = os["id"]
 
-    resposta = client.post(f"/ordens-de-servico/{os_id}/aprovacao", json={"aprovado": True}, headers=headers_admin)
+    resposta = client.post(
+        f"/ordens-de-servico/{os_id}/aprovacao",
+        json={"aprovado": True},
+        headers=headers_admin,
+    )
     assert resposta.status_code == 422
 
 
@@ -373,7 +387,11 @@ def test_listar_itens_os_apenas_pendentes(client, headers_admin, setup_base):
     os_id = os["id"]
     item_id = os["itens_servico"][0]["id"]
 
-    client.post(f"/ordens-de-servico/{os_id}/aprovacao", json={"aprovado": True}, headers=headers_admin)
+    client.post(
+        f"/ordens-de-servico/{os_id}/aprovacao",
+        json={"aprovado": True},
+        headers=headers_admin,
+    )
     client.post(
         f"/ordens-de-servico/{os_id}/executar-servico/{item_id}", headers=headers_admin
     )

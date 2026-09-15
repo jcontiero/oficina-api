@@ -7,13 +7,14 @@ from src.atendimento.dominio.entidades import (
     OrdemDeServico,
     ItemServico,
     ItemPeca,
+    HistoricoOS,
 )
 from src.atendimento.dominio.repositorios import (
     ClienteRepositorio,
     VeiculoRepositorio,
     OrdemDeServicoRepositorio,
 )
-from src.atendimento.dominio.value_objects import StatusOS, StatusCliente, StatusVeiculo
+from src.atendimento.dominio.value_objects import StatusOS, StatusCliente
 from src.atendimento.infraestrutura.modelos import (
     ClienteModel,
     VeiculoModel,
@@ -22,6 +23,7 @@ from src.atendimento.infraestrutura.modelos import (
     ItemPecaModel,
     HistoricoOSModel,
 )
+from src.shared.outbox import OutboxEventoModel
 
 STATUS_ATIVOS = [
     StatusOS.RECEBIDA,
@@ -270,10 +272,46 @@ class OrdemDeServicoRepositorioImpl(OrdemDeServicoRepositorio):
                         status_novo=h.status_novo,
                         ocorrido_em=h.ocorrido_em,
                         sequencia=h.sequencia,
-                        origem=h.origem
+                        origem=h.origem,
                     )
                 )
 
+                # Opcional: Gerar evento no outbox apenas se for aguardando aprovacao, ou todos?
+                # O requisito foca no AGUARDANDO_APROVACAO. Vamos gerar de qualquer forma,
+                # ou filtrar aqui para salvar espaço.
+                if h.status_novo == StatusOS.AGUARDANDO_APROVACAO:
+                    import json
+                    from decimal import Decimal
+
+                    def decimal_default(obj):
+                        if isinstance(obj, Decimal):
+                            return str(obj)
+                        raise TypeError
+
+                    payload = {
+                        "os_id": str(os.id),
+                        "cliente_id": str(os.cliente_id),
+                        "veiculo_id": str(os.veiculo_id),
+                        "status_anterior": (
+                            h.status_anterior.value if h.status_anterior else None
+                        ),
+                        "status_novo": h.status_novo.value,
+                        "valor_orcamento": (
+                            float(os.valor_orcamento) if os.valor_orcamento else None
+                        ),
+                        "descricao_problema": os.descricao_problema,
+                        "laudo_diagnostico": os.laudo_diagnostico,
+                    }
+
+                    # Cria o evento de outbox na mesma transacao
+                    self.db.add(
+                        OutboxEventoModel(
+                            tipo_evento="OsStatusAlterado",
+                            payload=json.loads(
+                                json.dumps(payload, default=decimal_default)
+                            ),
+                        )
+                    )
 
     def _para_entidade(self, m: OrdemDeServicoModel) -> OrdemDeServico:
         itens_servico = [
@@ -307,7 +345,7 @@ class OrdemDeServicoRepositorioImpl(OrdemDeServicoRepositorio):
                 status_novo=h.status_novo,
                 ocorrido_em=h.ocorrido_em,
                 sequencia=h.sequencia,
-                origem=h.origem
+                origem=h.origem,
             )
             for h in sorted(m.historico, key=lambda x: x.sequencia)
         ]

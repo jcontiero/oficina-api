@@ -19,7 +19,6 @@ class AtualizarClienteRequest(BaseModel):
     status: str = "ATIVO"
 
 
-
 class ClienteResponse(BaseModel):
     id: str
     nome: str
@@ -28,7 +27,6 @@ class ClienteResponse(BaseModel):
     email: str
     telefone: str
     status: str = "ATIVO"
-
 
     @classmethod
     def from_domain(cls, c: Cliente) -> "ClienteResponse":

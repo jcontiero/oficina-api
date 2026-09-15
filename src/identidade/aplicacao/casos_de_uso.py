@@ -29,14 +29,18 @@ class AutenticarUsuario:
 
 
 class CriarUsuario:
-    def __init__(self, repo: UsuarioRepositorio, hash_provider: ProvedorHashSenha, uow: UnitOfWork | None = None):
+    def __init__(
+        self,
+        repo: UsuarioRepositorio,
+        hash_provider: ProvedorHashSenha,
+        uow: UnitOfWork | None = None,
+    ):
         self.repo = repo
         self.hash_provider = hash_provider
 
         self.uow = uow
 
     @transactional
-
     def executar(self, email: str, senha: str, perfil: PerfilUsuario) -> Usuario:
         usuario = Usuario(
             id=uuid4(),

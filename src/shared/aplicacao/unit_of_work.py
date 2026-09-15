@@ -1,5 +1,6 @@
 import abc
 
+
 class UnitOfWork(abc.ABC):
     def __enter__(self):
         return self
@@ -18,6 +19,7 @@ class UnitOfWork(abc.ABC):
 
 def transactional(func):
     import functools
+
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         uow = getattr(self, "uow", None)
@@ -27,4 +29,5 @@ def transactional(func):
             result = func(self, *args, **kwargs)
             uow.commit()
             return result
+
     return wrapper

@@ -11,6 +11,7 @@ class StatusCliente(str, Enum):
     ATIVO = "ATIVO"
     INATIVO = "INATIVO"
 
+
 class StatusVeiculo(str, Enum):
     ATIVO = "ATIVO"
     INATIVO = "INATIVO"

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+coverage.xml
+.venv/
+venv/
+ENV/
+env/
+.env
+.aider*
+.cline*
+.cursor*
+.DS_Store

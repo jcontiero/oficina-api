@@ -1,3 +1,4 @@
+from uuid import UUID
 from decimal import Decimal
 from uuid import uuid4
 

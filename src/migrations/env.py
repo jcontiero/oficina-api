@@ -24,6 +24,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from src.config import Configuracoes
 from src.shared.banco import Base
 
+# Importar explicitamente os models para garantir que estejam no Base.metadata
+
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", Configuracoes().database_url)
 
@@ -81,3 +83,9 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
+# noqa: F401
+from src.identidade.infraestrutura.repositorios import UsuarioModel  # noqa: F401
+from src.catalogo.infraestrutura.repositorios import ServicoModel  # noqa: F401
+from src.estoque.infraestrutura.repositorios import PecaModel  # noqa: F401
+from src.shared.outbox import OutboxEventoModel  # noqa: F401
