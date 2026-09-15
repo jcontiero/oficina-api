@@ -4,8 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Configuracoes(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str
-    secret_key: str
+    database_url: str = "sqlite:///./test.db"
+    secret_key: str = "default-secret-key-for-dev-and-tests-min-32-chars"
     algorithm: str = "HS256"
     jwks_url: str = "http://localhost/.well-known/jwks.json"
 

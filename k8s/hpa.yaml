@@ -2,11 +2,8 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: oficina-api-hpa
-  namespace: oficina-api
   labels:
     app: oficina-api
-    tier: api
-    env: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -27,10 +24,3 @@ spec:
         target:
           type: Utilization
           averageUtilization: 80
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-      policies:
-        - type: Percent
-          value: 10
-          periodSeconds: 60

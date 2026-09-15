@@ -2,13 +2,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: oficina-api
-  namespace: oficina-api
   labels:
     app: oficina-api
-    tier: api
-    env: production
+    tags.datadoghq.com/service: oficina-api
 spec:
   replicas: 2
+  revisionHistoryLimit: 5
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -17,81 +16,51 @@ spec:
   selector:
     matchLabels:
       app: oficina-api
-      tier: api
   template:
     metadata:
       labels:
         app: oficina-api
-        tier: api
-        env: production
+        tags.datadoghq.com/service: oficina-api
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 999
-        runAsGroup: 999
-        fsGroup: 999
+        runAsUser: 1000
+        runAsGroup: 1000
       containers:
         - name: api
-          image: oficina-api:v0.2.0
+          image: us-central1-docker.pkg.dev/pos-fiap-2026/oficina-docker/oficina-api:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8000
-              name: http
+            - name: http
+              containerPort: 8000
           envFrom:
             - configMapRef:
                 name: oficina-api-config
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: oficina-api-secret
-                  key: DATABASE_URL
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: oficina-api-secret
-                  key: SECRET_KEY
-            - name: SMTP_USER
-              valueFrom:
-                secretKeyRef:
-                  name: oficina-api-secret
-                  key: SMTP_USER
-            - name: SMTP_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: oficina-api-secret
-                  key: SMTP_PASSWORD
-            - name: ADMIN_SENHA
-              valueFrom:
-                secretKeyRef:
-                  name: oficina-api-secret
-                  key: ADMIN_SENHA
+            - secretRef:
+                name: oficina-api-secret
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "250m"
+              cpu: 100m
+              memory: 128Mi
             limits:
-              memory: "512Mi"
-              cpu: "1000m"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 3
+              cpu: 500m
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
-            capabilities:
-              drop:
-                - ALL
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2

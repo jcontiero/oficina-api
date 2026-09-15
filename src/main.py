@@ -66,6 +66,24 @@ def criar_app(configuracoes=None) -> FastAPI:
     def health_check():
         return {"status": "ok"}
 
+    @app.get("/health/live", tags=["health"])
+    def liveness_check():
+        return {"status": "alive"}
+
+    @app.get("/health/ready", tags=["health"])
+    def readiness_check():
+        from sqlalchemy import text
+        from fastapi import HTTPException, status
+        try:
+            with app.state.container.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return {"status": "ready", "database": "connected"}
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Database unreachable: {str(e)}"
+            )
+
     app.add_exception_handler(CredenciaisInvalidasError, handler_credenciais_invalidas)
     
     # Atendimento - Regra de Negocio
