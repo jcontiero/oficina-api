@@ -180,7 +180,7 @@
                         cnpj: cliente.cnpj || undefined
                     },
                     veiculo: { 
-                        placa: "ZZZ" + Math.floor(1000 + Math.random() * 9000).toString(),
+                        placa: "ZZZ" + (1000 + (window.crypto.getRandomValues(new Uint32Array(1))[0] % 9000)).toString(),
                         marca: veiculo.marca,
                         modelo: veiculo.modelo,
                         ano: veiculo.ano,

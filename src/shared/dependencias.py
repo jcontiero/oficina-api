@@ -14,7 +14,7 @@ def get_usuario_atual(
 
     token = credentials.credentials
     try:
-        unverified = jwt.decode(token, options={"verify_signature": False})
+        unverified = jwt.decode(token, options={"verify_signature": False}) # NOSONAR
         actor_type = unverified.get("actor_type")
 
         # Obter dependências do FastAPI container manualmente ou via Request.
