@@ -72,6 +72,8 @@ jobs:
         run: gcloud container clusters get-credentials oficina-gke-cluster --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }}
 
       - name: Deploy to K8s
+        env:
+          DB_URL_SECRET: ${{ secrets.DB_URL }}
         run: |
           # Usamos namespace baseado na branch
           NAMESPACE=${{ github.ref_name == 'main' && 'production' || 'homolog' }}
@@ -81,7 +83,7 @@ jobs:
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment-worker.yaml
           # Substituir variáveis no secret
-          sed -i "s|DB_URL_PLACEHOLDER|${{ secrets.DB_URL }}|g" k8s/secret.yaml
+          sed -i "s|DB_URL_PLACEHOLDER|${DB_URL_SECRET}|g" k8s/secret.yaml
           
           # Aplicar manifestos
           kubectl apply -f k8s/ -n $NAMESPACE
