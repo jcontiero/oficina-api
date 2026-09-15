@@ -55,6 +55,8 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: 'gke-gcloud-auth-plugin'
 
       - name: Docker auth
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
@@ -74,6 +76,7 @@ jobs:
           # Usamos namespace baseado na branch
           NAMESPACE=${{ github.ref_name == 'main' && 'production' || 'homolog' }}
           kubectl apply -f k8s/namespace-${{ github.ref_name == 'main' && 'prod' || 'homolog' }}.yaml
+          rm -f k8s/namespace-*.yaml
           # Substituir a tag da imagem
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment-worker.yaml
