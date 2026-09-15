@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install uv
         uses: astral-sh/setup-uv@v3
       - name: Set up Python
@@ -32,10 +34,14 @@ jobs:
         run: uv run ruff check src tests scripts
       - name: Black check
         run: uv run black --check src tests scripts
-      - name: Pytest
-        run: uv run pytest tests/unit -q
+      - name: Pytest com Cobertura
+        run: uv run pytest tests/unit --cov=src --cov-report=xml:coverage.xml --cov-fail-under=0 -q
         env:
           SECRET_KEY: ci-secret-key-para-testes-32-chars-ok
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   build-push-deploy:
     runs-on: ubuntu-latest
