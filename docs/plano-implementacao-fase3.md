@@ -1418,17 +1418,3 @@ A entrega só deve ser declarada concluída quando houver evidência de que:
 - Diagramas, RFCs, ADRs e modelo ER correspondem ao ambiente implantado.
 - O vídeo e o PDF final contêm todos os links exigidos.
 
-## 18. Pontos de parada obrigatórios para o modelo implementador
-
-O modelo deve parar e pedir confirmação humana quando:
-
-- A região, IDs dos projetos ou domínio ainda não estiverem definidos.
-- Um `terraform plan` indicar destruição ou substituição de banco, cluster, rede ou state.
-- O spike do API Gateway não impedir acesso direto ao GKE.
-- Uma migration exigir perda ou transformação irreversível de dados.
-- O custo estimado ultrapassar o orçamento informado.
-- Uma decisão sobre múltiplas unidades, CNPJ, OTP ou retenção de dados alterar o escopo.
-- Houver segredo real versionado ou indício de vazamento.
-- Alterações concorrentes de outro colaborador entrarem em conflito com o pacote atual.
-
-Fora desses casos, o modelo deve concluir cada pacote com implementação, testes, documentação e evidências antes de iniciar o próximo.

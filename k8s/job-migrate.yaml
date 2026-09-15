@@ -21,7 +21,7 @@ spec:
         runAsGroup: 1000
       containers:
         - name: migrate
-          image: us-central1-docker.pkg.dev/pos-fiap-2026/oficina-docker/oficina-api:latest
+          image: us-east1-docker.pkg.dev/pos-fiap-2026/oficina-repo/oficina-api:latest
           command: ["alembic", "upgrade", "head"]
           envFrom:
             - configMapRef:
