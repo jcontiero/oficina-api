@@ -12,7 +12,7 @@ env:
   PYTHON_VERSION: "3.12"
   PROJECT_ID: "pos-fiap-2026"
   REGION: "us-east1"
-  REPOSITORY: "oficina-repo"
+  REPOSITORY: "oficina-docker"
   IMAGE_NAME: "oficina-api"
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
           docker push $IMAGE_URI:latest
 
       - name: Get GKE Credentials
-        run: gcloud container clusters get-credentials oficina-cluster --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }}
+        run: gcloud container clusters get-credentials oficina-gke-cluster --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }}
 
       - name: Deploy to K8s
         run: |

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: us-east1-docker.pkg.dev/pos-fiap-2026/oficina-repo/oficina-api:latest
+          image: us-east1-docker.pkg.dev/pos-fiap-2026/oficina-docker/oficina-api:latest
           command: ["uv", "run", "python", "-m", "src.worker"]
           envFrom:
             - configMapRef:
