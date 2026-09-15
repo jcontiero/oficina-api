@@ -32,6 +32,12 @@ jobs:
         env:
           SECRET_KEY: ci-secret-key-para-testes-32-chars-ok
 
+      - name: Configure SonarCloud New Code period
+        run: |
+          curl -s -X POST \
+            "https://sonarcloud.io/api/new_code_periods/set?project=jcontiero_oficina-api&type=NUMBER_OF_DAYS&value=365" \
+            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}"
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
