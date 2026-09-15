@@ -57,14 +57,14 @@
     <div class="card" style="background-color: #f1f8ff; padding: 10px; margin-bottom: 20px;">
         <label for="api-env"><strong>Ambiente: </strong></label>
         <select id="api-env" onchange="updateApiUrl()">
-            <option value="http://localhost:8000">Localhost (Desenvolvimento)</option>
-            <option value="https://api.oficina.internal">API Gateway GCP (Produção)</option>
+                <option value="http://35.229.26.175">Cluster GKE (IP Público: 35.229.26.175)</option>
+                <option value="https://oficina-gateway-dkvx20rp.ue.gateway.dev">API Gateway (Cloud Functions)</option>
         </select>
-        <span style="font-size: 12px; margin-left: 10px;">URL Base: <b id="current-url">http://localhost:8000</b></span>
+        <span style="font-size: 12px; margin-left: 10px;">URL Base: <b id="current-url">http://35.229.26.175</b></span>
     </div>
 
     <script>
-        let API_URL = "http://localhost:8000";
+        let API_URL = "http://35.229.26.175";
         let token = null;
 
         function updateApiUrl() {

@@ -80,6 +80,8 @@ jobs:
           # Substituir a tag da imagem
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment-worker.yaml
-          sed -i "s|latest|${{ github.sha }}|g" k8s/job-migrate.yaml
+          # Substituir variáveis no secret
+          sed -i "s|DB_URL_PLACEHOLDER|${{ secrets.DB_URL }}|g" k8s/secret.yaml
+          
           # Aplicar manifestos
           kubectl apply -f k8s/ -n $NAMESPACE
