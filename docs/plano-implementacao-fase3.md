@@ -27,7 +27,7 @@
 
 ## 1. Como usar este documento
 
-Este plano é a fonte de execução da Fase 3. O modelo implementador deve:
+Este plano é a fonte de execução da Fase 3. O time de desenvolvimento deve:
 
 1. Ler este documento e os três arquivos de requisitos antes de alterar código.
 2. Executar os pacotes na ordem indicada na seção 16.
@@ -62,7 +62,7 @@ Estas escolhas foram confirmadas pelo responsável do projeto e devem ser tratad
 
 ### 2.2 Propostas técnicas deste plano
 
-As escolhas abaixo foram propostas por este documento, não pelo responsável. O modelo implementador pode substituí-las se o spike ou a validação de custos justificar, registrando a mudança em ADR:
+As escolhas abaixo foram propostas por este documento, não pelo responsável. O time pode substituí-las se o spike ou a validação de custos justificar, registrando a mudança em ADR:
 
 | Tema | Proposta |
 |---|---|
