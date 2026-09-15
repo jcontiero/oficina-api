@@ -22,6 +22,15 @@
 <body>
     <h1>🚀 Demo - APIs da Fase 2 (Oficina Mecânica)</h1>
     <p>Utilize este painel para executar os testes do seu roteiro de vídeo de forma visual e fluida.</p>
+    <div class="card" style="background-color: #f1f8ff; padding: 10px; margin-bottom: 20px;">
+        <label for="api-env"><strong>Ambiente: </strong></label>
+        <select id="api-env" onchange="updateApiUrl()">
+                <option value="http://35.229.26.175">Cluster GKE (IP Público: 35.229.26.175)</option>
+                <option value="https://oficina-gateway-dkvx20rp.ue.gateway.dev">API Gateway (Cloud Functions)</option>
+        </select>
+        <span style="font-size: 12px; margin-left: 10px;">URL Base: <b id="current-url">http://35.229.26.175</b></span>
+    </div>
+
     
     <div class="card" id="auth-card">
         <h3>🔑 1. Autenticação</h3>
@@ -62,14 +71,6 @@
         <span id="login-cliente-status" style="margin-left: 15px; font-weight: bold; color: #666;">Não autenticado</span>
     </div>
 
-    <div class="card" style="background-color: #f1f8ff; padding: 10px; margin-bottom: 20px;">
-        <label for="api-env"><strong>Ambiente: </strong></label>
-        <select id="api-env" onchange="updateApiUrl()">
-                <option value="http://35.229.26.175">Cluster GKE (IP Público: 35.229.26.175)</option>
-                <option value="https://oficina-gateway-dkvx20rp.ue.gateway.dev">API Gateway (Cloud Functions)</option>
-        </select>
-        <span style="font-size: 12px; margin-left: 10px;">URL Base: <b id="current-url">http://35.229.26.175</b></span>
-    </div>
 
     <script>
         let API_URL = "http://35.229.26.175";
@@ -113,8 +114,8 @@
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            if (data.token) {
-                token = data.token;
+            if (data.access_token) {
+                token = data.access_token;
                 document.getElementById('login-cliente-status').innerText = '✅ Autenticado Serverless (Cliente)!';
                 document.getElementById('login-cliente-status').style.color = '#8e44ad';
             } else {
@@ -184,7 +185,7 @@
                         modelo: veiculo.modelo,
                         ano: veiculo.ano,
                         cor: veiculo.cor,
-                        descricao_problema: "Apresentado no Vídeo - Carro fazendo barulho no motor"
+                        descricao_problema: "Cliente relata barulho metálico no motor ao acelerar e perda leve de potência. Luz de óleo acendeu no painel."
                     },
                     servicos: [
                         { servico_id: servico.id, observacao: "Incluso via abertura unificada pelo frontend" }
