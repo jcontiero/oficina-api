@@ -322,7 +322,6 @@
                 
                 document.getElementById('cliente-jwt-box').style.display = 'block';
                 document.getElementById('cliente-jwt-text').innerText = clienteToken;
-                listarOSCliente();
             } else {
                 statusEl.innerText = "❌ Falha na autenticação: " + (data.detail || JSON.stringify(data));
                 statusEl.style.color = "#c62828";
@@ -334,8 +333,10 @@
     }
 
     async function listarOSCliente() {
-        const targetToken = clienteToken || adminToken;
-        if (!targetToken) return alert("Faça a autenticação por CPF primeiro!");
+        if (!clienteToken) {
+            alert("Acesso negado: Você precisa se autenticar com o CPF primeiro no Passo 1!");
+            return;
+        }
 
         const listEl = document.getElementById('cliente-os-list');
         listEl.innerHTML = "<i>Carregando suas ordens de serviço...</i>";
@@ -343,7 +344,7 @@
         try {
             // Consome a API protegida usando o token gerado pelo Serverless
             const res = await fetch(`${GKE_URL}/ordens-de-servico`, {
-                headers: { 'Authorization': `Bearer ${targetToken}` }
+                headers: { 'Authorization': `Bearer ${clienteToken}` }
             });
             const data = await res.json();
             
@@ -374,8 +375,7 @@
     async function decidirOrcamento(aprovado) {
         const id = document.getElementById('cliente-os-id').value.trim();
         if (!id) return alert("Selecione ou cole o ID da Ordem de Serviço!");
-        const targetToken = clienteToken || adminToken;
-        if (!targetToken) return alert("Faça a autenticação por CPF primeiro!");
+        if (!clienteToken) return alert("Faça a autenticação por CPF primeiro!");
 
         const out = document.getElementById('cliente-aprovacao-result');
         out.innerText = "Enviando decisão para a API protegida...";
@@ -384,7 +384,7 @@
             const res = await fetch(`${GKE_URL}/ordens-de-servico/${id}/aprovacao`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${targetToken}`,
+                    'Authorization': `Bearer ${clienteToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
