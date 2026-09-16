@@ -24,7 +24,7 @@ class JwtTokenProviderCliente(ProvedorToken):
                 signing_key.key,
                 algorithms=["RS256"],
                 audience="oficina-api",
-                issuer="oficina-serverless",
+                issuer=["oficina-auth-serverless", "oficina-serverless"],
             )
 
             actor = payload.get("actor_type")
