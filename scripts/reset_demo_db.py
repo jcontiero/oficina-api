@@ -1,4 +1,3 @@
-import os
 from decimal import Decimal
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -48,7 +47,16 @@ def reset_and_seed_demo():
     except Exception as e:
         print(f"Erro ao truncar (tentando delete): {e}")
         db.rollback()
-        for model in [ItemPecaModel, ItemServicoModel, OrdemDeServicoModel, VeiculoModel, ClienteModel, ServicoModel, PecaModel, UsuarioModel]:
+        for model in [
+            ItemPecaModel,
+            ItemServicoModel,
+            OrdemDeServicoModel,
+            VeiculoModel,
+            ClienteModel,
+            ServicoModel,
+            PecaModel,
+            UsuarioModel,
+        ]:
             db.query(model).delete()
         db.commit()
 
