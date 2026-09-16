@@ -369,7 +369,9 @@ def get_processar_aprovacao_orcamento(
     uow: UowDep,
 ) -> ProcessarAprovacaoOrcamento:
     return ProcessarAprovacaoOrcamento(
-        OrdemDeServicoRepositorioImpl(db), PecaRepositorioImpl(db), uow=uow
+        repo=OrdemDeServicoRepositorioImpl(db),
+        peca_repo=PecaRepositorioImpl(db),
+        uow=uow,
     )
 
 
