@@ -2,248 +2,519 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Oficina API - Demo Fase 2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oficina Mecânica - Painel de Demonstração (Fase 3)</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; color: #333; padding: 20px; max-width: 900px; margin: 0 auto; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; }
-        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:hover { background: #0056b3; }
-        button.action { background: #28a745; }
-        button.action:hover { background: #218838; }
-        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 400px; font-size: 13px; margin-top: 15px; }
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px; width: 320px; font-family: monospace;}
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #f8f9fa; color: #555; }
-        tr:nth-child(even) { background: #fcfcfc; }
-        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #e9ecef; color: #495057; }
+        :root {
+            --primary: #1976d2;
+            --primary-dark: #0d47a1;
+            --serverless: #7b1fa2;
+            --serverless-dark: #4a148c;
+            --success: #2e7d32;
+            --danger: #c62828;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        h1 { margin: 0 0 8px 0; font-size: 24px; color: #1a202c; }
+        p.subtitle { margin: 0; color: #718096; font-size: 14px; }
+        
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #e2e8f0;
+            color: #4a5568;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .tab-btn:hover { background: #cbd5e0; }
+        .tab-btn.active-admin {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+        }
+        .tab-btn.active-cliente {
+            background: var(--serverless);
+            color: white;
+            box-shadow: 0 4px 12px rgba(123, 31, 162, 0.3);
+        }
+
+        /* ENV BAR */
+        .env-bar {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .env-tag {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: monospace;
+        }
+        .env-admin { background: #e3f2fd; color: #0d47a1; }
+        .env-cliente { background: #f3e5f5; color: #4a148c; }
+
+        /* CARDS */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            border-left: 5px solid transparent;
+        }
+        .card-admin { border-left-color: var(--primary); }
+        .card-cliente { border-left-color: var(--serverless); }
+        .card h3 { margin-top: 0; margin-bottom: 8px; font-size: 17px; }
+        .card p { margin-top: 0; font-size: 13px; color: #555; }
+
+        /* FORMS & BUTTONS */
+        button {
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .btn-admin { background: var(--primary); color: white; }
+        .btn-cliente { background: var(--serverless); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        input {
+            padding: 10px 14px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+        input:focus { border-color: var(--primary); }
+
+        /* TABLES & OUTPUT */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+        th { background: #f8fafc; font-weight: 600; color: #475569; }
+        tr:nth-child(even) { background: #fbfcfe; }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            background: #e2e8f0;
+            color: #334155;
+        }
+        .status-RECEBIDA { background: #e0f2fe; color: #0369a1; }
+        .status-EM_DIAGNOSTICO { background: #fef3c7; color: #92400e; }
+        .status-AGUARDANDO_APROVACAO { background: #fce7f3; color: #9d174d; }
+        .status-EM_EXECUCAO { background: #dbeafe; color: #1e40af; }
+        .status-FINALIZADA { background: #dcfce7; color: #166534; }
+        
+        pre {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 14px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 250px;
+            font-family: 'SFMono-Regular', Consolas, Monaco, monospace;
+        }
+        .auth-status {
+            margin-left: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .jwt-preview {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 10px;
+            color: #6d4c41;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
-    <h1>🚀 Demo - APIs da Fase 2 (Oficina Mecânica)</h1>
-    <p>Utilize este painel para executar os testes do seu roteiro de vídeo de forma visual e fluida.</p>
-    <div class="card" style="background-color: #f1f8ff; padding: 10px; margin-bottom: 20px;">
-        <label for="api-env"><strong>Ambiente: </strong></label>
-        <select id="api-env" onchange="updateApiUrl()">
-                <option value="http://35.229.26.175">Cluster GKE (IP Público: 35.229.26.175)</option>
-                <option value="https://oficina-gateway-dkvx20rp.ue.gateway.dev">API Gateway (Cloud Functions)</option>
-        </select>
-        <span style="font-size: 12px; margin-left: 10px;">URL Base: <b id="current-url">http://35.229.26.175</b></span>
+
+<div class="container">
+    <header>
+        <h1>🛠️ Oficina Mecânica - Sistema de Gestão & Autoatendimento</h1>
+        <p class="subtitle">Demonstração Integrada da Fase 3: Arquitetura Serverless, Microsserviço GKE e APIs Protegidas</p>
+    </header>
+
+    <!-- SELETOR DE FRENTES / PERFIS -->
+    <div class="tabs">
+        <button id="tab-btn-cliente" class="tab-btn active-cliente" onclick="switchTab('cliente')">
+            📱 Frente Cliente (Autoatendimento Serverless)
+        </button>
+        <button id="tab-btn-admin" class="tab-btn" onclick="switchTab('admin')">
+            🏢 Frente Funcionário / Admin (Operação de Oficina)
+        </button>
     </div>
 
-    
-    <div class="card" id="auth-card">
-        <h3>🔑 1. Autenticação</h3>
-        <p>Gera o token JWT de Admin para as requisições.</p>
-        <button onclick="login()">Fazer Login (Admin)</button>
-        <span id="login-status" style="margin-left: 15px; font-weight: bold; color: #666;">Não autenticado</span>
+    <!-- ============================================================== -->
+    <!-- FRENTE 1: CLIENTE (SERVERLESS / API GATEWAY) -->
+    <!-- ============================================================== -->
+    <div id="tab-cliente" class="tab-content active">
+        <div class="env-bar">
+            <span><strong>Ambiente Alvo:</strong> Google Cloud API Gateway (Serverless)</span>
+            <span class="env-tag env-cliente" id="cliente-url">https://oficina-gateway-dkvx20rp.ue.gateway.dev</span>
+        </div>
+
+        <div class="card card-cliente">
+            <h3 style="color: var(--serverless);">🔐 1. Autenticação Serverless por CPF</h3>
+            <p>O cliente insere apenas seu documento para se identificar. A requisição vai para a <strong>Cloud Function</strong> pelo <strong>API Gateway</strong>, gerando um token JWT seguro (RS256).</p>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="cpf-input" placeholder="Digite o CPF (apenas números)" value="12345678909" style="width: 260px;">
+                <button class="btn-cliente" onclick="loginCliente()">Autenticar com CPF</button>
+                <span id="cliente-auth-status" class="auth-status" style="color: #64748b;">Aguardando login</span>
+            </div>
+            <div id="cliente-jwt-box" class="jwt-preview" style="display: none;">
+                <strong>Token JWT (Assinado RS256 pela Cloud Function):</strong>
+                <div id="cliente-jwt-text" style="margin-top: 4px; font-family: monospace;"></div>
+            </div>
+        </div>
+
+        <div class="card card-cliente">
+            <h3 style="color: var(--serverless);">📋 2. Acompanhamento das Minhas Ordens de Serviço (API Protegida)</h3>
+            <p>Consome a API protegida repassada pelo API Gateway ao GKE para verificar o andamento do conserto do veículo.</p>
+            <button class="btn-cliente" onclick="listarOSCliente()">Consultar Minhas OS</button>
+            <div id="cliente-os-list"></div>
+        </div>
+
+        <div class="card card-cliente">
+            <h3 style="color: var(--serverless);">✅ 3. Aprovação / Rejeição de Orçamento</h3>
+            <p>O cliente avalia e aprova a execução do serviço e substituição das peças recomendadas.</p>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                <input type="text" id="cliente-os-id" placeholder="ID da OS (clique na tabela acima)" style="width: 320px;">
+                <button class="btn-success" onclick="decidirOrcamento(true)">✅ Aprovar Orçamento</button>
+                <button style="background: var(--danger); color: white;" onclick="decidirOrcamento(false)">❌ Recusar</button>
+            </div>
+            <pre id="cliente-aprovacao-result">Aguardando ação de aprovação...</pre>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>📋 2. Listagem Ordenada de OS (Ativas)</h3>
-        <p>Demonstra a regra de negócio: Em Execução > Aguardando Aprovação > Diagnóstico > Recebida.</p>
-        <button class="action" onclick="listarOS()">Listar OS</button>
-        <div id="os-list"></div>
+    <!-- ============================================================== -->
+    <!-- FRENTE 2: FUNCIONÁRIO / ADMIN (GKE DIRETO / CLUSTER INTERNO) -->
+    <!-- ============================================================== -->
+    <div id="tab-admin" class="tab-content">
+        <div class="env-bar">
+            <span><strong>Ambiente Alvo:</strong> Cluster Kubernetes GKE Autopilot (Namespace: production)</span>
+            <span class="env-tag env-admin" id="admin-url">http://35.229.26.175</span>
+        </div>
+
+        <div class="card card-admin">
+            <h3 style="color: var(--primary);">🔑 1. Autenticação Administrativa (RBAC)</h3>
+            <p>Login de operador/mecânico para gerenciamento interno e abertura de ordens.</p>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <input type="email" id="admin-email" value="admin@oficina.com.br" style="width: 220px;" placeholder="E-mail">
+                <input type="password" id="admin-senha" value="admin123" style="width: 150px;" placeholder="Senha">
+                <button class="btn-admin" onclick="loginAdmin()">Fazer Login Admin</button>
+                <span id="admin-auth-status" class="auth-status" style="color: #64748b;">Não autenticado</span>
+            </div>
+        </div>
+
+        <div class="card card-admin">
+            <h3 style="color: var(--primary);">➕ 2. Recepção & Abertura Unificada de OS</h3>
+            <p>Criação atômica e completa: registra cliente, veículo, serviço de diagnóstico e gera a OS inicial.</p>
+            <button class="btn-admin" onclick="abrirOSAdmin()">Nova OS Completa (Entrada de Veículo)</button>
+            <pre id="admin-abertura-result">Clique no botão acima para criar uma nova OS de demonstração...</pre>
+        </div>
+
+        <div class="card card-admin">
+            <h3 style="color: var(--primary);">📊 3. Painel Geral de Ordens de Serviço (Oficina)</h3>
+            <p>Lista todas as ordens na fila da oficina com status atualizado em tempo real.</p>
+            <button class="btn-admin" onclick="listarOSAdmin()">Atualizar Quadro da Oficina</button>
+            <div id="admin-os-list"></div>
+        </div>
     </div>
+</div>
 
-    <div class="card">
-        <h3>➕ 3. Abertura Unificada</h3>
-        <p>Injeta um payload complexo para criar uma OS para o primeiro cliente da base.</p>
-        <button class="action" onclick="abrirOS()">Criar Nova OS (Abertura Unificada)</button>
-        <pre id="abertura-result">Clique no botão acima para ver o resultado da API...</pre>
-    </div>
+<script>
+    const GATEWAY_URL = "https://oficina-gateway-dkvx20rp.ue.gateway.dev";
+    const GKE_URL = "http://35.229.26.175";
 
-    <div class="card">
-        <h3>⚙️ 4. Consulta de Status e Aprovação</h3>
-        <p>Copie o ID de uma OS (Aguardando Aprovação) da listagem acima e cole aqui para aprovar.</p>
-        <input type="text" id="os-id" aria-label="ID da Ordem de Serviço" placeholder="ID da Ordem de Serviço (UUID)">
-        <br>
-        <button onclick="consultarStatus()">Consultar Status</button>
-        <button class="action" onclick="aprovarOS()">Aprovar Orçamento</button>
-        <pre id="status-result">Aguardando ação...</pre>
-    </div>
+    let clienteToken = null;
+    let adminToken = null;
 
-    <div class="card" id="auth-serverless-card" style="border: 2px solid #8e44ad; background-color: #fcf3ff;">
-        <h3 style="color: #8e44ad;">🔐 Fase 3 - Autenticação de Cliente (Serverless)</h3>
-        <p>Gera o token JWT do Cliente batendo na Cloud Function através do API Gateway.</p>
-        <input type="text" id="cpf-cliente" aria-label="CPF do Cliente" placeholder="CPF do Cliente (ex: 12345678909)" value="12345678909">
-        <button onclick="loginCliente()" style="background-color: #8e44ad;">Fazer Login Serverless (Cliente)</button>
-        <span id="login-cliente-status" style="margin-left: 15px; font-weight: bold; color: #666;">Não autenticado</span>
-    </div>
+    function switchTab(tab) {
+        document.getElementById('tab-cliente').classList.remove('active');
+        document.getElementById('tab-admin').classList.remove('active');
+        document.getElementById('tab-btn-cliente').classList.remove('active-cliente');
+        document.getElementById('tab-btn-admin').classList.remove('active-admin');
 
-
-    <script>
-        let API_URL = "http://35.229.26.175";
-        let token = null;
-
-        function updateApiUrl() {
-            API_URL = document.getElementById('api-env').value;
-            document.getElementById('current-url').innerText = API_URL;
+        if (tab === 'cliente') {
+            document.getElementById('tab-cliente').classList.add('active');
+            document.getElementById('tab-btn-cliente').classList.add('active-cliente');
+        } else {
+            document.getElementById('tab-admin').classList.add('active');
+            document.getElementById('tab-btn-admin').classList.add('active-admin');
         }
+    }
 
-        async function login() {
-            const payload = {
-                email: 'admin@oficina.com.br',
-                senha: 'admin123'
-            };
+    // ==========================================
+    // MÉTODOS CLIENTE (SERVERLESS)
+    // ==========================================
+    async function loginCliente() {
+        const cpf = document.getElementById('cpf-input').value.trim();
+        if (!cpf) return alert("Por favor, digite o CPF!");
 
-            const res = await fetch(`${API_URL}/auth/login`, {
+        const statusEl = document.getElementById('cliente-auth-status');
+        statusEl.innerText = "Autenticando via Cloud Function...";
+        statusEl.style.color = "#7b1fa2";
+
+        try {
+            const res = await fetch(`${GATEWAY_URL}/auth/cpf`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (data.token) {
-                token = data.token;
-                document.getElementById('login-status').innerText = '✅ Autenticado (Admin)!';
-                document.getElementById('login-status').style.color = '#28a745';
-            } else {
-                alert("Falha no login admin! " + JSON.stringify(data));
-            }
-        }
-
-        async function loginCliente() {
-            const cpf = document.getElementById('cpf-cliente').value;
-            if (!cpf) return alert("Digite o CPF!");
-            
-            const payload = { cpf: cpf };
-
-            const res = await fetch(`${API_URL}/auth/cpf`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ cpf: cpf })
             });
             const data = await res.json();
             if (data.access_token) {
-                token = data.access_token;
-                document.getElementById('login-cliente-status').innerText = '✅ Autenticado Serverless (Cliente)!';
-                document.getElementById('login-cliente-status').style.color = '#8e44ad';
+                clienteToken = data.access_token;
+                statusEl.innerText = "✅ Autenticado com Sucesso (Serverless)!";
+                statusEl.style.color = "#2e7d32";
+                
+                document.getElementById('cliente-jwt-box').style.display = 'block';
+                document.getElementById('cliente-jwt-text').innerText = clienteToken;
+                listarOSCliente();
             } else {
-                alert("Falha na autenticação serverless! " + JSON.stringify(data));
+                statusEl.innerText = "❌ Falha na autenticação: " + (data.detail || JSON.stringify(data));
+                statusEl.style.color = "#c62828";
             }
+        } catch (e) {
+            statusEl.innerText = "❌ Erro ao chamar API Gateway: " + e.message;
+            statusEl.style.color = "#c62828";
         }
+    }
 
-        function getHeaders() {
-            return {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            };
-        }
+    async function listarOSCliente() {
+        const targetToken = clienteToken || adminToken;
+        if (!targetToken) return alert("Faça a autenticação por CPF primeiro!");
 
-        async function listarOS() {
-            if (!token) return alert("Faça o login primeiro no Passo 1!");
-            document.getElementById('os-list').innerHTML = "<i>Carregando...</i>";
-            
-            const res = await fetch(`${API_URL}/ordens-de-servico`, { headers: getHeaders() });
+        const listEl = document.getElementById('cliente-os-list');
+        listEl.innerHTML = "<i>Carregando suas ordens de serviço...</i>";
+
+        try {
+            // Consome a API protegida usando o token gerado pelo Serverless
+            const res = await fetch(`${GKE_URL}/ordens-de-servico`, {
+                headers: { 'Authorization': `Bearer ${targetToken}` }
+            });
             const data = await res.json();
             
-            let html = `<table><tr><th>ID (Copie para testar)</th><th>Problema Relatado</th><th>Status da OS</th><th>Data/Hora</th></tr>`;
+            if (!Array.isArray(data)) {
+                listEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                return;
+            }
+
+            let html = `<table><tr><th>ID da OS (Clique p/ selecionar)</th><th>Problema Relatado</th><th>Status Atual</th><th>Data de Entrada</th></tr>`;
             data.forEach(os => {
+                const badgeClass = `status-${os.status}`;
                 html += `<tr>
-                    <td style="font-family: monospace; font-size: 11px; cursor: pointer; color: #007bff;" onclick="document.getElementById('os-id').value='${os.id}'" title="Clique para copiar para o campo de Aprovação">${os.id}</td>
+                    <td style="font-family: monospace; font-size: 11px; cursor: pointer; color: #7b1fa2; font-weight: bold;" 
+                        onclick="document.getElementById('cliente-os-id').value='${os.id}'" 
+                        title="Clique para selecionar">${os.id}</td>
                     <td>${os.descricao_problema}</td>
-                    <td><span class="status-badge">${os.status}</span></td>
-                    <td>${new Date(os.criada_em).toLocaleString()}</td>
+                    <td><span class="status-badge ${badgeClass}">${os.status}</span></td>
+                    <td>${new Date(os.criada_em).toLocaleString('pt-BR')}</td>
                 </tr>`;
             });
-            html += `</table><p><small><i>Dica: Clique no ID na tabela para copiar para o campo abaixo.</i></small></p>`;
-            document.getElementById('os-list').innerHTML = html;
+            html += `</table><p><small style="color: #666;">💡 <i>Dica: Clique no código da OS acima para preencher o campo de aprovação abaixo.</i></small></p>`;
+            listEl.innerHTML = html;
+        } catch (e) {
+            listEl.innerHTML = `<span style="color:red">Erro: ${e.message}</span>`;
         }
+    }
 
-        async function abrirOS() {
-            if (!token) return alert("Faça o login primeiro no Passo 1!");
-            document.getElementById('abertura-result').innerText = "Processando abertura unificada...";
-            
-            try {
-                // Pega o primeiro cliente
-                let res = await fetch(`${API_URL}/clientes`, { headers: getHeaders() });
-                const clientes = await res.json();
-                const cliente = clientes[0];
+    async function decidirOrcamento(aprovado) {
+        const id = document.getElementById('cliente-os-id').value.trim();
+        if (!id) return alert("Selecione ou cole o ID da Ordem de Serviço!");
+        const targetToken = clienteToken || adminToken;
+        if (!targetToken) return alert("Faça a autenticação por CPF primeiro!");
 
-                // Pega os veiculos do cliente
-                res = await fetch(`${API_URL}/veiculos?cliente_id=${cliente.id}`, { headers: getHeaders() });
-                const veiculos = await res.json();
-                const veiculo = veiculos[0];
+        const out = document.getElementById('cliente-aprovacao-result');
+        out.innerText = "Enviando decisão para a API protegida...";
 
-                // Pega o primeiro serviço do catálogo para adicionar na OS
-                res = await fetch(`${API_URL}/servicos`, { headers: getHeaders() });
-                const catalogoServicos = await res.json();
-                const servico = catalogoServicos[0];
-
-                // Payload no padrão da Fase 2 (Abertura Unificada)
-                const payload = {
-                    cliente: { 
-                        nome: cliente.nome,
-                        email: cliente.email,
-                        telefone: cliente.telefone,
-                        cpf: cliente.cpf || undefined,
-                        cnpj: cliente.cnpj || undefined
-                    },
-                    veiculo: { 
-                        placa: "ZZZ" + (1000 + (window.crypto.getRandomValues(new Uint32Array(1))[0] % 9000)).toString(),
-                        marca: veiculo.marca,
-                        modelo: veiculo.modelo,
-                        ano: veiculo.ano,
-                        cor: veiculo.cor,
-                        descricao_problema: "Cliente relata barulho metálico no motor ao acelerar e perda leve de potência. Luz de óleo acendeu no painel."
-                    },
-                    servicos: [
-                        { servico_id: servico.id, observacao: "Incluso via abertura unificada pelo frontend" }
-                    ],
-                    pecas: []
-                };
-
-                res = await fetch(`${API_URL}/ordens-de-servico`, {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                document.getElementById('abertura-result').innerText = "Status: " + res.status + "\n\n" + JSON.stringify(data, null, 2);
-                
-                if (res.ok) {
-                    document.getElementById('os-id').value = data.id;
-                    listarOS(); // Atualiza a lista
-                }
-            } catch (error) {
-                document.getElementById('abertura-result').innerText = "Erro: " + error.message;
-            }
-        }
-
-        async function consultarStatus() {
-            const id = document.getElementById('os-id').value;
-            if (!id) return alert("Preencha o ID da OS ou clique em algum ID da tabela acima.");
-            if (!token) return alert("Faça o login primeiro!");
-            
-            const res = await fetch(`${API_URL}/ordens-de-servico/${id}/status`, { headers: getHeaders() });
+        try {
+            const res = await fetch(`${GKE_URL}/ordens-de-servico/${id}/aprovacao`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${targetToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    aprovado: aprovado,
+                    motivo: aprovado ? "Aprovado pelo cliente via Portal Serverless" : "Orçamento recusado pelo cliente"
+                })
+            });
             const data = await res.json();
-            document.getElementById('status-result').innerText = "Status: " + res.status + "\n\n" + JSON.stringify(data, null, 2);
+            out.innerText = `HTTP ${res.status}\n\n` + JSON.stringify(data, null, 2);
+            if (res.ok) {
+                listarOSCliente();
+            }
+        } catch (e) {
+            out.innerText = "Erro: " + e.message;
         }
+    }
 
-        async function aprovarOS() {
-            const id = document.getElementById('os-id').value;
-            if (!id) return alert("Preencha o ID da OS ou clique em algum ID da tabela acima.");
-            if (!token) return alert("Faça o login primeiro!");
+    // ==========================================
+    // MÉTODOS ADMIN / OFICINA (GKE)
+    // ==========================================
+    async function loginAdmin() {
+        const email = document.getElementById('admin-email').value;
+        const senha = document.getElementById('admin-senha').value;
+        const statusEl = document.getElementById('admin-auth-status');
+
+        try {
+            const res = await fetch(`${GKE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, senha: senha })
+            });
+            const data = await res.json();
+            if (data.token) {
+                adminToken = data.token;
+                statusEl.innerText = "✅ Operador Autenticado!";
+                statusEl.style.color = "#2e7d32";
+                listarOSAdmin();
+            } else {
+                statusEl.innerText = "❌ Falha no login: " + JSON.stringify(data);
+                statusEl.style.color = "#c62828";
+            }
+        } catch (e) {
+            statusEl.innerText = "❌ Erro: " + e.message;
+            statusEl.style.color = "#c62828";
+        }
+    }
+
+    async function listarOSAdmin() {
+        if (!adminToken) return alert("Faça o login de Administrador primeiro!");
+        const listEl = document.getElementById('admin-os-list');
+        listEl.innerHTML = "<i>Atualizando quadro de serviços do cluster GKE...</i>";
+
+        try {
+            const res = await fetch(`${GKE_URL}/ordens-de-servico`, {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const data = await res.json();
+            let html = `<table><tr><th>ID da OS</th><th>Problema</th><th>Status</th><th>Criada Em</th></tr>`;
+            data.forEach(os => {
+                const badgeClass = `status-${os.status}`;
+                html += `<tr>
+                    <td style="font-family: monospace; font-size: 11px;">${os.id}</td>
+                    <td>${os.descricao_problema}</td>
+                    <td><span class="status-badge ${badgeClass}">${os.status}</span></td>
+                    <td>${new Date(os.criada_em).toLocaleString('pt-BR')}</td>
+                </tr>`;
+            });
+            html += `</table>`;
+            listEl.innerHTML = html;
+        } catch (e) {
+            listEl.innerHTML = `<span style="color:red">Erro: ${e.message}</span>`;
+        }
+    }
+
+    async function abrirOSAdmin() {
+        if (!adminToken) return alert("Faça o login de Administrador primeiro!");
+        const out = document.getElementById('admin-abertura-result');
+        out.innerText = "Consultando catálogo e gerando nova OS no GKE...";
+
+        try {
+            const headers = { 'Authorization': `Bearer ${adminToken}` };
+            
+            // Busca base de clientes e catálogo para montar a OS
+            const resClientes = await fetch(`${GKE_URL}/clientes`, { headers });
+            const clientes = await resClientes.json();
+            const cliente = clientes[0] || { nome: "Jonas Contiero", email: "jonas@teste.com", telefone: "11999999999", cpf: "12345678909" };
+
+            const resServ = await fetch(`${GKE_URL}/servicos`, { headers });
+            const servicos = await resServ.json();
+            const servico = servicos[0];
+
+            const placaAleatoria = "ABC" + Math.floor(1000 + Math.random() * 9000);
 
             const payload = {
-                aprovado: true,
-                motivo: "Aprovado via Painel de Demo"
+                cliente: {
+                    nome: cliente.nome,
+                    email: cliente.email,
+                    telefone: cliente.telefone,
+                    cpf: cliente.cpf || "12345678909"
+                },
+                veiculo: {
+                    placa: placaAleatoria,
+                    marca: "Toyota",
+                    modelo: "Corolla XEi",
+                    ano: 2022,
+                    cor: "Prata",
+                    descricao_problema: "Revisão periódica dos 40.000 km e troca preventiva de fluidos."
+                },
+                servicos: [
+                    { servico_id: servico.id, observacao: "Check-up preventivo de freios e suspensão" }
+                ],
+                pecas: []
             };
 
-            const res = await fetch(`${API_URL}/ordens-de-servico/${id}/aprovacao`, {
+            const res = await fetch(`${GKE_URL}/ordens-de-servico`, {
                 method: 'POST',
-                headers: getHeaders(),
+                headers: {
+                    ...headers,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            
-            if(res.ok) {
-                 document.getElementById('status-result').innerText = "✅ SUCESSO - Orçamento Aprovado!\n\n" + JSON.stringify(data, null, 2);
-                 listarOS(); // Atualiza a lista
-            } else {
-                 document.getElementById('status-result').innerText = "❌ ERRO DA REGRA DE NEGÓCIO\n(A OS precisa estar em AGUARDANDO_APROVACAO ou você pode estar sem peças no estoque)\n\n" + JSON.stringify(data, null, 2);
-            }
+            out.innerText = `Status HTTP: ${res.status}\nNova OS Criada com Sucesso:\n` + JSON.stringify(data, null, 2);
+            listarOSAdmin();
+        } catch (e) {
+            out.innerText = "Erro: " + e.message;
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>
