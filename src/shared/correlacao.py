@@ -2,7 +2,9 @@ from contextvars import ContextVar
 import logging
 import os
 
-correlacao_ctx: ContextVar[dict[str, str]] = ContextVar("correlacao_ctx", default={})
+correlacao_ctx: ContextVar[dict[str, str] | None] = ContextVar(
+    "correlacao_ctx", default=None
+)
 
 
 def extrair_trace_e_span(traceparent: str | None) -> tuple[str, str]:
@@ -21,7 +23,7 @@ def extrair_trace_e_span(traceparent: str | None) -> tuple[str, str]:
 
 class FiltroCorrelacaoPadrao(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        ctx = correlacao_ctx.get({})
+        ctx = correlacao_ctx.get() or {}
         padroes = {
             "dd.service": os.getenv("DD_SERVICE", "oficina-api"),
             "dd.env": os.getenv("DD_ENV", "homolog"),
