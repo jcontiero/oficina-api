@@ -53,7 +53,6 @@ jobs:
 
   bdd-integrado:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
       - name: Checkout oficina-api
         uses: actions/checkout@v4
@@ -63,13 +62,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jcontiero/oficina-billing
-          ref: 1bf3b6104643f3b8eb681c489769ccc0e249e58a
+          ref: fd8b78bb80c75fe33a95cb9611ffaf7f563f7161
           path: oficina-billing
       - name: Checkout oficina-execucao (SHA P6)
         uses: actions/checkout@v4
         with:
           repository: jcontiero/oficina-execucao
-          ref: 5fe546af46e8e537eb95a2bdcb1260d956dfddef
+          ref: ee8449de74139258457c15acd29d960fb7832e8e
           path: oficina-execucao
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -100,7 +99,9 @@ jobs:
         env:
           RUN_LIVE_BDD: "1"
           PYTHONPATH: "."
-        run: uv run pytest tests/bdd/test_p6_bdd_integrado.py -v --junitxml=integration/relatorios/bdd-junit.xml
+        run: |
+          uv run pytest tests/bdd/test_p6_bdd_integrado.py -v --junitxml=integration/relatorios/bdd-junit.xml
+          uv run pytest tests/bdd/test_p6_bdd_integrado.py -v --junitxml=integration/relatorios/bdd-reexecucao-junit.xml
       - name: Coletar logs e encerrar stack
         if: always()
         working-directory: oficina-api
@@ -118,14 +119,32 @@ jobs:
 
   build-push-deploy:
     runs-on: ubuntu-latest
-    needs: [validate]
+    needs: [validate, bdd-integrado]
     if: github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog')
     environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
     permissions:
       id-token: write
       contents: read
+      checks: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Verify required checks for exact deployment commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" > /tmp/deploy-checks.json
+          python - <<'PYTHON'
+          import json
+          checks = json.load(open('/tmp/deploy-checks.json'))['check_runs']
+          required = ['validate', 'SonarCloud Code Analysis', 'bdd-integrado', 'SonarQube']
+          for name in required:
+              matches = [c for c in checks if c['name'] == name]
+              latest = max(matches, key=lambda c: c['id']) if matches else None
+              if latest is None or latest['conclusion'] != 'success':
+                  raise SystemExit(f'Check obrigatório ausente ou reprovado: {name}')
+          print('Checks aprovados para o SHA de deploy')
+          PYTHON
 
       - name: Set environment metadata
         id: env
@@ -174,9 +193,12 @@ jobs:
           IMAGE_TAG: ${{ steps.env.outputs.image_tag }}
         run: |
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
-          GW_HOST="oficina-gateway-${ENV_CANON}.endpoints.${{ env.PROJECT_ID }}.cloud.goog"
+          GW_HOST="$(gcloud api-gateway gateways describe "oficina-gateway-${ENV_CANON}" --location=us-east1 --project="${{ env.PROJECT_ID }}" --format="value(defaultHostname)")"
 
           kubectl create namespace "${K8S_NS}" --dry-run=client -o yaml | kubectl apply -f -
+          if [ "${ENV_CANON}" = "homolog" ]; then
+            kubectl apply -f k8s/ingress-homolog.yaml
+          fi
 
           mkdir -p /tmp/rendered-k8s
           cp k8s/*.yaml /tmp/rendered-k8s/
@@ -187,13 +209,14 @@ jobs:
             sed -i "s|oficina-api-database-url-homolog|oficina-api-database-url-${ENV_CANON}|g" "$f"
             sed -i "s|oficina-api-secret-key-homolog|oficina-api-secret-key-${ENV_CANON}|g" "$f"
             sed -i "s|oficina-api-admin-jwt-private-key-homolog|oficina-api-admin-jwt-private-key-${ENV_CANON}|g" "$f"
-            sed -i "s|oficina-client-auth-homolog|oficina-client-auth-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-fn-homolog-sa|oficina-fn-${ENV_CANON}-sa|g" "$f"
             sed -i "s|oficina-backend-homolog|oficina-backend-${ENV_CANON}|g" "$f"
             sed -i "s|oficina-admin-homolog|oficina-admin-${ENV_CANON}|g" "$f"
             sed -i "s|oficina-auth-homolog|oficina-auth-${ENV_CANON}|g" "$f"
             sed -i "s|ENVIRONMENT: \"homolog\"|ENVIRONMENT: \"${ENV_CANON}\"|g" "$f"
             sed -i "s|DD_VERSION: \"latest\"|DD_VERSION: \"${{ steps.env.outputs.image_tag }}\"|g" "$f"
             sed -i "s|GATEWAY_HOST_PLACEHOLDER|${GW_HOST}|g" "$f"
+            sed -i 's/value: "latest"/value: "'"${IMAGE_TAG}"'"/g' "$f"
           done
 
           # 1. Aplicar ServiceAccount, ConfigMap e SecretProviderClass primeiro
