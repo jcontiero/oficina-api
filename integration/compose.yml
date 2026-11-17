@@ -1,0 +1,150 @@
+name: oficina-fase4-stack
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres_admin
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-postgres_admin_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init_postgres.sh:/docker-entrypoint-initdb.d/01-init-isolated-dbs.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres_admin -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command:
+      - gcloud
+      - beta
+      - emulators
+      - pubsub
+      - start
+      - --project=fiap-project-514922
+      - --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8085/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  firestore-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command:
+      - gcloud
+      - beta
+      - emulators
+      - firestore
+      - start
+      - --project=fiap-project-514922
+      - --host-port=0.0.0.0:8086
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8086/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  pubsub-init:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      GCP_PROJECT_ID: fiap-project-514922
+      ENVIRONMENT: homolog
+    volumes:
+      - ./init_pubsub.py:/app/init_pubsub.py:ro
+    command: ["python", "/app/init_pubsub.py"]
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+
+  oficina-os:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+pg8000://oficina_os_user:oficina_os_pass@postgres:5432/oficina_os_homolog
+      SECRET_KEY: stack-local-secret-key-minimo-32-chars
+      GCP_PROJECT_ID: fiap-project-514922
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      DD_SERVICE: oficina-api
+      DD_ENV: homolog
+      DD_VERSION: 0.2.0
+      DD_TRACE_ENABLED: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pubsub-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  oficina-billing:
+    build:
+      context: ../../oficina-billing
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+pg8000://oficina_billing_user:oficina_billing_pass@postgres:5432/oficina_billing_homolog
+      ENVIRONMENT: homolog
+      GCP_PROJECT_ID: fiap-project-514922
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      DD_SERVICE: oficina-billing
+      DD_ENV: homolog
+      DD_VERSION: 0.1.0
+      DD_TRACE_ENABLED: "false"
+      MP_WEBHOOK_SECRET: local-mp-webhook-secret
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pubsub-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  oficina-execucao:
+    build:
+      context: ../../oficina-execucao
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: homolog
+      GCP_PROJECT_ID: fiap-project-514922
+      FIRESTORE_DATABASE: "(default)"
+      FIRESTORE_EMULATOR_HOST: firestore-emulator:8086
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      USE_IN_MEMORY_STORE: "false"
+      DD_SERVICE: oficina-execucao
+      DD_ENV: homolog
+      DD_VERSION: 0.1.0
+      DD_TRACE_ENABLED: "false"
+    ports:
+      - "8002:8000"
+    depends_on:
+      firestore-emulator:
+        condition: service_healthy
+      pubsub-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10

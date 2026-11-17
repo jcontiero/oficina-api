@@ -41,21 +41,50 @@ from src.shared.excecoes_http import (
 
 
 import logging
+import os
 from pythonjsonlogger import jsonlogger
-from ddtrace import patch_all
 
-# Aplica patches em bibliotecas padrão (FastAPI, SQLAlchemy, Logging, etc)
-patch_all()
+# Habilita ddtrace apenas quando DD_TRACE_ENABLED=true para não exigir Agent local
+if os.getenv("DD_TRACE_ENABLED", "false").lower() in {"1", "true", "yes"}:
+    try:
+        from ddtrace import patch_all
 
-# Configura o logger raiz para usar JSON e injetar o Trace ID
+        patch_all()
+    except Exception:
+        pass
+
+
+class _FiltroCorrelacaoPadrao(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        for campo, padrao in (
+            ("dd.service", os.getenv("DD_SERVICE", "oficina-api")),
+            ("dd.env", os.getenv("DD_ENV", "homolog")),
+            ("dd.version", os.getenv("DD_VERSION", "0.2.0")),
+            ("dd.trace_id", "0"),
+            ("dd.span_id", "0"),
+            ("correlation_id", ""),
+            ("saga_id", ""),
+            ("os_id", ""),
+            ("event_id", ""),
+        ):
+            if not hasattr(record, campo):
+                setattr(record, campo, padrao)
+        return True
+
+
+# Configura o logger raiz para usar JSON e injetar o Trace ID e correlação
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logHandler = logging.StreamHandler()
 formatter = jsonlogger.JsonFormatter(
-    "%(asctime)s %(levelname)s %(name)s %(message)s dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s",
+    "%(asctime)s %(levelname)s %(name)s %(message)s "
+    "dd.service=%(dd.service)s dd.env=%(dd.env)s dd.version=%(dd.version)s "
+    "dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s "
+    "correlation_id=%(correlation_id)s saga_id=%(saga_id)s os_id=%(os_id)s event_id=%(event_id)s",
     rename_fields={"levelname": "level", "asctime": "timestamp"},
 )
 logHandler.setFormatter(formatter)
+logHandler.addFilter(_FiltroCorrelacaoPadrao())
 logger.addHandler(logHandler)
 # Evita logs duplicados no uvicorn se ele criar seus próprios handlers
 logger.propagate = False
