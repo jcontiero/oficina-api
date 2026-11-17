@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from contextvars import ContextVar
 import logging
 import os
@@ -40,3 +41,55 @@ class FiltroCorrelacaoPadrao(logging.Filter):
             if atual is None or atual in ("", "0"):
                 setattr(record, campo, valor)
         return True
+
+
+def traceparent_atual(recebido: str | None = None) -> str | None:
+    from ddtrace import tracer
+    from ddtrace.propagation.http import HTTPPropagator
+
+    headers = {}
+    contexto = tracer.current_trace_context()
+    if contexto is not None:
+        HTTPPropagator.inject(contexto, headers)
+    return headers.get("traceparent") or recebido
+
+
+@contextmanager
+def consumir_contexto(dados, traceparent):
+    from ddtrace import tracer
+    from ddtrace.propagation.http import HTTPPropagator
+
+    anterior = tracer.context_provider.active()
+    contexto = {
+        **(correlacao_ctx.get() or {}),
+        **{
+            k: str(dados.get(k, ""))
+            for k in ("correlation_id", "saga_id", "os_id", "event_id")
+        },
+    }
+    token = correlacao_ctx.set(contexto)
+    try:
+        if os.getenv("DD_TRACE_ENABLED", "false").lower() != "true":
+            yield traceparent
+            return
+        if traceparent:
+            tracer.context_provider.activate(
+                HTTPPropagator.extract({"traceparent": traceparent})
+            )
+        with tracer.trace(
+            "pubsub.consume", resource=dados.get("event_type", "mensagem")
+        ) as span:
+            contexto.update(
+                {
+                    "trace_id": str(span.trace_id),
+                    "span_id": str(span.span_id),
+                    "dd.trace_id": str(span.trace_id),
+                    "dd.span_id": str(span.span_id),
+                }
+            )
+            for chave, valor in contexto.items():
+                span.set_tag(chave, valor)
+            yield traceparent_atual(traceparent)
+    finally:
+        correlacao_ctx.reset(token)
+        tracer.context_provider.activate(anterior)

@@ -1,3 +1,4 @@
+from src.shared.correlacao import traceparent_atual
 from typing import Annotated
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -615,7 +616,7 @@ def abrir_os_v1(
             cliente_id=os_ent.cliente_id,
             veiculo_id=os_ent.veiculo_id,
             descricao_problema=os_ent.descricao_problema,
-            traceparent=request.headers.get("traceparent"),
+            traceparent=traceparent_atual(request.headers.get("traceparent")),
         )
         db.commit()
     except (ClienteNaoEncontradoError, VeiculoNaoEncontradoError) as e:
@@ -683,7 +684,7 @@ def cancelar_os_via_saga_v1(
     env = request.app.state.container.config.environment
     try:
         saga = OrquestradorSaga(db, environment=env).solicitar_cancelamento(
-            os_id=id, traceparent=request.headers.get("traceparent")
+            os_id=id, traceparent=traceparent_atual(request.headers.get("traceparent"))
         )
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
@@ -707,7 +708,7 @@ def reprocessar_estorno_saga_v1(
     env = request.app.state.container.config.environment
     try:
         saga = OrquestradorSaga(db, environment=env).reprocessar_estorno(
-            os_id=id, traceparent=request.headers.get("traceparent")
+            os_id=id, traceparent=traceparent_atual(request.headers.get("traceparent"))
         )
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
@@ -732,7 +733,7 @@ def nova_rodada_os_v1(
     try:
         saga = OrquestradorSaga(db, environment=env).reabrir_nova_rodada(
             os_id=id,
-            traceparent=request.headers.get("traceparent"),
+            traceparent=traceparent_atual(request.headers.get("traceparent")),
         )
     except ValueError as e:
         raise HTTPException(409, str(e))

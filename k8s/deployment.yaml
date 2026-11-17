@@ -49,8 +49,9 @@ spec:
           env:
             - name: DD_ENV
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+                configMapKeyRef:
+                  name: oficina-api-config
+                  key: ENVIRONMENT
             - name: DD_SERVICE
               value: "oficina-api"
             - name: DD_AGENT_HOST
