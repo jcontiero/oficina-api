@@ -1,10 +1,12 @@
 from typing import Annotated
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID, uuid4
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import BaseModel
 from src.identidade.dominio.entidades import Principal
 
 from src.shared.dependencias import get_usuario_atual, require_admin, require_mecanico
 from src.container import (
+    get_abrir_ordem_de_servico,
     get_cadastrar_cliente,
     get_listar_clientes,
     get_buscar_cliente,
@@ -36,6 +38,7 @@ from src.estoque.dominio.excecoes import (
 )
 from src.catalogo.dominio.excecoes import ServicoNaoEncontradoError
 from src.atendimento.aplicacao.casos_de_uso import (
+    AbrirOrdemDeServico,
     CadastrarCliente,
     ListarClientes,
     BuscarCliente,
@@ -533,3 +536,70 @@ def entregar_veiculo(
         raise HTTPException(422, str(e))
     except OrdemDeServicoNaoEncontradaError as e:
         raise HTTPException(404, str(e))
+
+
+# -- Rotas Canônicas Fase 4 (/v1/ordens-servico) -------------------------------
+
+
+class AbrirOsV1Request(BaseModel):
+    cliente_documento: str
+    veiculo_placa: str
+    descricao_problema: str
+
+
+@router.post("/v1/ordens-servico", status_code=status.HTTP_202_ACCEPTED)
+def abrir_os_v1(
+    body: AbrirOsV1Request,
+    response: Response,
+    caso_de_uso: Annotated[AbrirOrdemDeServico, Depends(get_abrir_ordem_de_servico)],
+    _: AdminDep,
+):
+    """
+    Contrato v1 da Fase 4: cria a OS no estado RECEBIDA e inicia a rodada da Saga
+    sem calcular orçamento nem reservar peças localmente no OS Service.
+    """
+    try:
+        os_ent = caso_de_uso.executar(
+            cliente_cpf_cnpj=body.cliente_documento,
+            veiculo_placa=body.veiculo_placa,
+            descricao_problema=body.descricao_problema,
+        )
+    except (ClienteNaoEncontradoError, VeiculoNaoEncontradoError) as e:
+        raise HTTPException(404, str(e))
+    except (VeiculoComOsAtivaError, ValueError) as e:
+        raise HTTPException(422, str(e))
+
+    saga_id = uuid4()
+    response.headers["Location"] = f"/v1/ordens-servico/{os_ent.id}"
+    return {
+        "os_id": str(os_ent.id),
+        "saga_id": str(saga_id),
+        "status": os_ent.status.value,
+        "location": f"/v1/ordens-servico/{os_ent.id}",
+    }
+
+
+@router.get("/v1/ordens-servico/{id}", response_model=OsResponse)
+def buscar_os_v1(
+    id: UUID,
+    caso_de_uso: Annotated[BuscarOrdemDeServico, Depends(get_buscar_ordem_de_servico)],
+    principal: AuthDep,
+):
+    return buscar_os(id=id, caso_de_uso=caso_de_uso, principal=principal)
+
+
+@router.get("/v1/ordens-servico/{id}/historico", response_model=AcompanharOsResponse)
+def historico_os_v1(
+    id: UUID,
+    caso_de_uso: Annotated[BuscarOrdemDeServico, Depends(get_buscar_ordem_de_servico)],
+):
+    return acompanhar_os(id=id, caso_de_uso=caso_de_uso)
+
+
+@router.post("/v1/ordens-servico/{id}/entrega", response_model=OsResponse)
+def entregar_os_v1(
+    id: UUID,
+    caso_de_uso: Annotated[EntregarVeiculo, Depends(get_entregar_veiculo)],
+    principal: AdminDep,
+):
+    return entregar_veiculo(id=id, caso_de_uso=caso_de_uso, _=principal)

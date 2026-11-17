@@ -174,8 +174,9 @@ def criar_app(configuracoes=None) -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(atendimento_router)
-    app.include_router(catalogo_router)
-    app.include_router(estoque_router)
+    if app.state.container.config.enable_legacy_monolith_domains:
+        app.include_router(catalogo_router)
+        app.include_router(estoque_router)
     app.include_router(relatorios_router)
 
     return app
