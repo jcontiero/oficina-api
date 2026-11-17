@@ -118,7 +118,7 @@ resource "google_secret_manager_secret" "database_url" {
 
 resource "google_secret_manager_secret_version" "database_url" {
   secret      = google_secret_manager_secret.database_url.id
-  secret_data = "postgresql://${google_sql_user.os_user.name}:${random_password.os_db_password.result}@${data.terraform_remote_state.cloudsql.outputs.cloud_sql_private_ip}:5432/${google_sql_database.os_db.name}"
+  secret_data = "postgresql+pg8000://${google_sql_user.os_user.name}:${random_password.os_db_password.result}@${data.terraform_remote_state.cloudsql.outputs.cloud_sql_private_ip}:5432/${google_sql_database.os_db.name}"
 }
 
 resource "google_secret_manager_secret_iam_member" "database_url_access" {
@@ -181,4 +181,15 @@ output "database_url_secret_id" {
 
 output "admin_jwt_private_key_secret_id" {
   value = google_secret_manager_secret.admin_jwt_private_key.secret_id
+}
+
+data "google_project" "pubsub_project" {
+  project_id = var.project_id
+}
+
+resource "google_pubsub_subscription_iam_member" "dead_letter_forwarder" {
+  project      = var.project_id
+  subscription = google_pubsub_subscription.os_orquestrador_sub.name
+  role         = "roles/pubsub.subscriber"
+  member       = "serviceAccount:service-${data.google_project.pubsub_project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
