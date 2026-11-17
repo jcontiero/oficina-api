@@ -19,6 +19,7 @@
      - Bancos Firestore nomeados exclusivos: `oficina-execucao-homolog` e `oficina-execucao-production`.
      - Service Account exclusiva (`oficina-execucao-sa-{env}`) com papel IAM restrito ao Firestore do respectivo ambiente.
      - Coleções: `servicos/{id}`, `pecas/{id}`, `diagnosticos/{os_id_rodada}`, `reservas/{saga_id}`, `execucoes/{os_id_rodada}`, `controle_saga/{saga_id}`, `inbox/{consumer_event_id}`, `outbox/{event_id}`.
+     - **Sem projeção NoSQL redundante no OS Service:** O Firestore nativo de `oficina-execucao` já atende integralmente o requisito de banco NoSQL da Fase 4; portanto, `os_tracking_projection` não será criada para evitar duplicação artificial de armazenamento.
 
 2. **Interpretação de "Infraestrutura Própria" com Custo Contido:**
    - "Infraestrutura própria" de cada microsserviço é atendida por Deployments, Services, HPAs, ConfigMaps, Secrets, Service Accounts (Workload Identity), pipelines CI/CD, states Terraform e bancos de dados lógicos/nomeados exclusivos por serviço.
