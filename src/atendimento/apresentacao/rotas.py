@@ -661,7 +661,57 @@ def consultar_saga_os_v1(
         "orcamento_id": saga.orcamento_id,
         "pagamento_id": saga.pagamento_id,
         "total_centavos": saga.total_centavos,
+        "efeitos_esperados": saga.efeitos_esperados_json,
+        "efeitos_confirmados": saga.efeitos_confirmados_json,
         "version": saga.version,
+    }
+
+
+@router.post("/v1/ordens-servico/{id}/cancelar", status_code=202)
+def cancelar_os_via_saga_v1(
+    id: UUID,
+    request: Request,
+    db: DBDep,
+    _: AuthDep,
+):
+    from src.saga.aplicacao.orquestrador import OrquestradorSaga
+
+    env = request.app.state.config.environment
+    try:
+        saga = OrquestradorSaga(db, environment=env).solicitar_cancelamento(
+            os_id=id, traceparent=request.headers.get("traceparent")
+        )
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {
+        "saga_id": saga.id,
+        "os_id": saga.os_id,
+        "estado": saga.estado,
+        "subestado_compensacao": saga.subestado_compensacao,
+    }
+
+
+@router.post("/v1/ordens-servico/{id}/saga/reprocessar-estorno", status_code=202)
+def reprocessar_estorno_saga_v1(
+    id: UUID,
+    request: Request,
+    db: DBDep,
+    _: AdminDep,
+):
+    from src.saga.aplicacao.orquestrador import OrquestradorSaga
+
+    env = request.app.state.config.environment
+    try:
+        saga = OrquestradorSaga(db, environment=env).reprocessar_estorno(
+            os_id=id, traceparent=request.headers.get("traceparent")
+        )
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {
+        "saga_id": saga.id,
+        "os_id": saga.os_id,
+        "estado": saga.estado,
+        "compensacao_financeira_status": saga.compensacao_financeira_status,
     }
 
 
