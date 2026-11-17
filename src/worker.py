@@ -30,7 +30,7 @@ def main():
     logger.info("Iniciando Outbox Worker...")
     cfg = Configuracoes()
 
-    project_id = os.getenv("GCP_PROJECT_ID", "pos-fiap-2026")
+    project_id = os.getenv("GCP_PROJECT_ID", "fiap-project-514922")
     topic_id = os.getenv("PUBSUB_TOPIC_ID", "oficina-notificacoes-topic")
 
     # Se estiver rodando localmente sem credenciais, podemos querer pular o pubsub real
