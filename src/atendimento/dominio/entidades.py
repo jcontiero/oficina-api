@@ -30,7 +30,6 @@ class Cliente:
     telefone: str
 
     status: StatusCliente = StatusCliente.ATIVO
-    status: StatusCliente = StatusCliente.ATIVO
 
     def __post_init__(self):
         tem_cpf = self.cpf is not None

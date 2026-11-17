@@ -15,6 +15,10 @@ env:
   REPOSITORY: "oficina-docker"
   IMAGE_NAME: "oficina-api"
 
+concurrency:
+  group: ci-cd-oficina-api-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -34,21 +38,54 @@ jobs:
         run: uv run ruff check src tests scripts
       - name: Black check
         run: uv run black --check src tests scripts
-      - name: Pytest
-        run: uv run pytest tests/unit -q
+      - name: Pytest (unit + integration) with coverage gate (>=80%)
+        run: uv run pytest tests/unit tests/integration --cov=src --cov-fail-under=80 -q
         env:
+          DD_TRACE_ENABLED: "false"
+          TEST_DATABASE_URL: "sqlite:////tmp/oficina_ci_test.db"
           SECRET_KEY: ci-secret-key-para-testes-32-chars-ok
 
   build-push-deploy:
     runs-on: ubuntu-latest
     needs: validate
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog'
+    environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Verify Homolog / Production Database Isolation Before Migration
+        env:
+          DB_URL_SECRET: ${{ secrets.DB_URL }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ -z "${DB_URL_SECRET}" ]; then
+            echo "ERROR: DB_URL secret is empty for environment (${TARGET_BRANCH}). Aborting before migration."
+            exit 1
+          fi
+          if [ "${TARGET_BRANCH}" = "homolog" ]; then
+            if echo "${DB_URL_SECRET}" | grep -Eq "oficina_prod|oficina_os_production"; then
+              echo "ERROR: Homolog deployment DB_URL points to a production database! Aborting before migration."
+              exit 1
+            fi
+            if ! echo "${DB_URL_SECRET}" | grep -Eq "oficina_homolog|oficina_os_homolog"; then
+              echo "ERROR: Homolog deployment DB_URL must explicitly target oficina_homolog or oficina_os_homolog."
+              exit 1
+            fi
+          elif [ "${TARGET_BRANCH}" = "main" ]; then
+            if echo "${DB_URL_SECRET}" | grep -Eq "homolog"; then
+              echo "ERROR: Production deployment DB_URL points to a homolog database! Aborting before migration."
+              exit 1
+            fi
+            if ! echo "${DB_URL_SECRET}" | grep -Eq "oficina_prod|oficina_os_production"; then
+              echo "ERROR: Production deployment DB_URL must explicitly target oficina_prod or oficina_os_production."
+              exit 1
+            fi
+          fi
+          echo "Database isolation verified for branch ${TARGET_BRANCH}."
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -73,19 +110,34 @@ jobs:
       - name: Get GKE Credentials
         run: gcloud container clusters get-credentials oficina-gke-cluster --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }}
 
-      - name: Deploy to K8s
+      - name: Run Coordinated Database Migration & Rollout to K8s
         env:
           DB_URL_SECRET: ${{ secrets.DB_URL }}
         run: |
-          # Usamos namespace baseado na branch
           NAMESPACE=${{ github.ref_name == 'main' && 'production' || 'homolog' }}
           kubectl apply -f k8s/namespace-${{ github.ref_name == 'main' && 'prod' || 'homolog' }}.yaml
           rm -f k8s/namespace-*.yaml
-          # Substituir a tag da imagem
+
+          # Fixar tag imutável por SHA no Job de migration, API e Worker
+          sed -i "s|latest|${{ github.sha }}|g" k8s/job-migrate.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment-worker.yaml
-          # Substituir variáveis no secret
+          sed -i "s|ENVIRONMENT: \"production\"|ENVIRONMENT: \"${NAMESPACE}\"|g" k8s/configmap.yaml
           sed -i "s|DB_URL_PLACEHOLDER|${DB_URL_SECRET}|g" k8s/secret.yaml
-          
-          # Aplicar manifestos
-          kubectl apply -f k8s/ -n $NAMESPACE
+
+          # 1. Aplicar ConfigMap e Secret primeiro
+          kubectl apply -f k8s/configmap.yaml -n $NAMESPACE
+          kubectl apply -f k8s/secret.yaml -n $NAMESPACE
+
+          # 2. Executar Job de migration com imagem do SHA e aguardar conclusão antes dos Deployments
+          kubectl delete job oficina-api-migrate -n $NAMESPACE --ignore-not-found=true
+          kubectl apply -f k8s/job-migrate.yaml -n $NAMESPACE
+          kubectl wait --for=condition=complete job/oficina-api-migrate -n $NAMESPACE --timeout=120s
+
+          # 3. Aplicar Deployments, Service e HPA e aguardar rollout
+          kubectl apply -f k8s/deployment.yaml -n $NAMESPACE
+          kubectl apply -f k8s/deployment-worker.yaml -n $NAMESPACE
+          kubectl apply -f k8s/service.yaml -n $NAMESPACE
+          kubectl apply -f k8s/hpa.yaml -n $NAMESPACE
+          kubectl rollout status deployment/oficina-api -n $NAMESPACE --timeout=120s
+          kubectl rollout status deployment/oficina-api-worker -n $NAMESPACE --timeout=120s

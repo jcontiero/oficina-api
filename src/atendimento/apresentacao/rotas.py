@@ -152,7 +152,9 @@ def atualizar_cliente(
     _: MecanicoDep,
 ):
     try:
-        cliente = caso_de_uso.executar(id=id, **body.model_dump(exclude_none=True))
+        cliente = caso_de_uso.executar(
+            id=id, **body.model_dump(exclude_none=True, exclude={"status"})
+        )
         return ClienteResponse.from_domain(cliente)
     except ClienteNaoEncontradoError as e:
         raise HTTPException(404, str(e))

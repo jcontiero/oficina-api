@@ -197,7 +197,11 @@ def test_listagem_ordenada_oculta_finalizadas(client, headers_admin, setup_base)
         setup_base["cliente"], outro_veiculo, setup_base["servico"]
     )
     os2 = client.post("/ordens-de-servico", json=payload2, headers=headers_admin).json()
-    client.post(f"/ordens-de-servico/{os2['id']}/aprovacao", json={"aprovado": True})
+    client.post(
+        f"/ordens-de-servico/{os2['id']}/aprovacao",
+        json={"aprovado": True},
+        headers=headers_admin,
+    )
     item_id = os2["itens_servico"][0]["id"]
     client.post(
         f"/ordens-de-servico/{os2['id']}/executar-servico/{item_id}",
