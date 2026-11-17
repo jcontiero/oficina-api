@@ -63,13 +63,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jcontiero/oficina-billing
-          ref: b461d47d3d028a14bf1a6a85eedc97fdf21ec41b
+          ref: 1bf3b6104643f3b8eb681c489769ccc0e249e58a
           path: oficina-billing
       - name: Checkout oficina-execucao (SHA P6)
         uses: actions/checkout@v4
         with:
           repository: jcontiero/oficina-execucao
-          ref: ddcfe6a31ba84955c723d2ce869d6f5b385f10f0
+          ref: 5fe546af46e8e537eb95a2bdcb1260d956dfddef
           path: oficina-execucao
       - name: Install uv
         uses: astral-sh/setup-uv@v3

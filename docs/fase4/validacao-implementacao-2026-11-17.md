@@ -289,17 +289,18 @@ As correções para R01–R12 e os apontamentos de SonarCloud foram implementado
 | **R08** | **corrigido** | Deadlines por etapa atualizados em `_transicionar_saga`, `expirar_sagas_vencidas` executado no loop do worker (`executar_ciclo_worker`), lock pessimista (`.with_for_update()`) em `SagaInstanceModel` validado com duas respostas simultâneas em PostgreSQL, `SagaStepModel` relacionado por `causation_id` + comando esperado, e claim atômico de outbox no worker. |
 | **R09** | **corrigido** | Validação e população da versão e itens reais do orçamento em `PagamentoConfirmado.v1` via `confirmar_pagamento_aprovado`. |
 | **R10** | **corrigido** | `CancelarCobranca.v1` no Billing, `cancelar-barreira` transacional na Execução e `reabrir_nova_rodada` / `POST /v1/ordens-servico/{id}/nova-rodada` na API. |
-| **R11** | **corrigido** | Propagação de `traceparent` no outbox e extração/ativação de `correlacao_ctx` (`correlation_id`, `saga_id`, `os_id`, `event_id`, `dd.trace_id`, `dd.span_id`) nos logs do consumidor (`consumir_mensagens_pull`). |
+| **R11** | **parcial** | Propagação de `traceparent` no outbox e extração/ativação de `correlacao_ctx` (`correlation_id`, `saga_id`, `os_id`, `event_id`, `dd.trace_id`, `dd.span_id`) nos logs do consumidor (`consumir_mensagens_pull`) concluídas localmente; aceite operacional do rastreamento distribuído entre serviços no Datadog pendente para a P7. |
 | **R12** | **corrigido** | Uso de `external_pos_id` e correspondência exata de `external_reference` na busca no Mercado Pago. |
 | **SonarCloud** | **corrigido** | Correção dos apontamentos de complexidade (`S3776`), literais (`S1192`), retorno constante (`S3516`), PEP 695 (`S6796`), logging (`S8572`) e testes (`S9073`, `S5778`). |
 
-- **oficina-billing** (`fix/audit-r01-r03-r09-r10-r12-sonar`, commit `b461d47d3d028a14bf1a6a85eedc97fdf21ec41b`, PR #5)
-- **oficina-execucao** (`fix/audit-r02-r05-r10-sonar`, commit `ddcfe6a31ba84955c723d2ce869d6f5b385f10f0`, PR #5)
-- **oficina-api** (`fix/audit-r01-r04-r06-r07-r08-r10-r11`, PR #20)
+- **oficina-billing** (`main` após PR #5): `1bf3b6104643f3b8eb681c489769ccc0e249e58a`
+- **oficina-execucao** (`main` após PR #5): `5fe546af46e8e537eb95a2bdcb1260d956dfddef`
+- **oficina-api** (PR #20 -> `main`): integração com os SHAs finais acima
 
-### Itens ainda pendentes (fora do escopo desta rodada local)
+### Aceites operacionais e itens pendentes (P7 / externos)
 
-- Merges dos PRs abertos (aguardando autorização).
-- Provisionamento P7 em nuvem (`bootstrap`, `terraform apply`, migração de state, deploy, Gateway/Functions/Cloud SQL/GKE/Datadog e distribuição real de chaves RS256 — R07 operacional).
+- Provisionamento P7 em nuvem (`bootstrap`, `terraform apply`, migração de state, deploy, Gateway/Functions/Cloud SQL/GKE/Datadog).
+- **R07 operacional:** distribuição efetiva das chaves RS256 via Secret Manager/GKE em `homolog` e `production`.
+- **R11 operacional:** demonstração do rastreamento distribuído efetivo entre serviços no Datadog APM na P7.
 - Aceite externo real com Mercado Pago (credenciais de teste e URL HTTPS de webhook).
 - Limpeza/inspeção manual dos arquivos não versionados com sufixo `2`.
