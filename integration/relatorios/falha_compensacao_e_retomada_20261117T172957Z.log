@@ -1,0 +1,444 @@
+oficina-execucao-1  | INFO:     Started server process [1]
+oficina-execucao-1  | INFO:     Waiting for application startup.
+oficina-execucao-1  | INFO:     Application startup complete.
+oficina-execucao-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+oficina-execucao-1  | INFO:     127.0.0.1:60360 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:44416 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:44476 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:38980 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:39004 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:35180 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:35214 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:58208 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:58228 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:37941 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:42204 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:44999 - "POST /v1/servicos HTTP/1.1" 201 Created
+oficina-execucao-1  | INFO:     192.168.65.1:44999 - "POST /v1/pecas HTTP/1.1" 201 Created
+os-migrate-1        | INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+oficina-execucao-1  | INFO:     192.168.65.1:44999 - "POST /v1/execucoes/0580387d-38f6-4231-881e-368eee45b443_1/diagnostico HTTP/1.1" 201 Created
+oficina-execucao-1  | INFO:     127.0.0.1:51088 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:51114 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:61652 - "GET /v1/pecas/6eeca2c9-1e59-458f-9c8f-911e258ac183 HTTP/1.1" 200 OK
+os-migrate-1        | INFO  [alembic.runtime.migration] Will assume transactional DDL.
+oficina-execucao-1  | INFO:     127.0.0.1:47682 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:36579 - "POST /v1/execucoes/0580387d-38f6-4231-881e-368eee45b443_1/iniciar HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:36579 - "POST /v1/execucoes/0580387d-38f6-4231-881e-368eee45b443_1/concluir HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     127.0.0.1:47718 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:50152 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-execucao-1  | INFO:     192.168.65.1:47713 - "POST /v1/servicos HTTP/1.1" 201 Created
+oficina-execucao-1  | INFO:     192.168.65.1:47713 - "POST /v1/pecas HTTP/1.1" 201 Created
+os-migrate-1        | INFO  [alembic.runtime.migration] Running upgrade  -> 28c30c8cd20c, Initial migration
+os-migrate-1        | INFO  [alembic.runtime.migration] Running upgrade 28c30c8cd20c -> 202609140001, aditiva historico status
+os-migrate-1        | INFO  [alembic.runtime.migration] Running upgrade 202609140001 -> 202609140002, constraints fase 3
+os-migrate-1        | INFO  [alembic.runtime.migration] Running upgrade 202609140002 -> c45c34fba153, cria tabela outbox eventos
+os-migrate-1        | INFO  [alembic.runtime.migration] Running upgrade c45c34fba153 -> 20261117_fase4, cria tabelas saga_instances, saga_steps, inbox_eventos e evolui outbox_eventos
+os-migrate-1        | INFO  [alembic.runtime.migration] Running upgrade 20261117_fase4 -> 20261117_adiantados, cria tabela saga_eventos_adiantados para reavaliacao de eventos fora de ordem
+firestore-emulator-1  | Executing: /google-cloud-sdk/platform/cloud-firestore-emulator/cloud_firestore_emulator start --host=0.0.0.0 --port=8086 --database-mode=firestore-native --database-edition=standard
+firestore-emulator-1  | [firestore] WARNING: A restricted method in java.lang.System has been called
+firestore-emulator-1  | [firestore] WARNING: java.lang.System::loadLibrary has been called by io.netty.util.internal.NativeLibraryUtil in an unnamed module (file:/google-cloud-sdk/platform/cloud-firestore-emulator/cloud-firestore-emulator.jar)
+firestore-emulator-1  | [firestore] WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+firestore-emulator-1  | [firestore] WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:38 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+firestore-emulator-1  | [firestore] INFO: Started WebSocket server on ws://0.0.0.0:39509
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore] API endpoint: http://0.0.0.0:8086
+firestore-emulator-1  | [firestore] Database Edition: STANDARD
+firestore-emulator-1  | [firestore] Database Mode: CLOUD_FIRESTORE
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore] If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore]    export FIRESTORE_EMULATOR_HOST=0.0.0.0:8086
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore] If you are running a Firestore in Datastore Mode project, run:
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore]    export DATASTORE_EMULATOR_HOST=0.0.0.0:8086
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore] Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
+firestore-emulator-1  | [firestore] Dev App Server is now running.
+firestore-emulator-1  | [firestore] 
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:41 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:46 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:53 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:54 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:28:56 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:01 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:06 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:11 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:16 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:26 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:31 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:36 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:41 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:47 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:52 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+firestore-emulator-1  | [firestore] Nov 17, 2026 5:29:57 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+firestore-emulator-1  | [firestore] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | Executing: /google-cloud-sdk/platform/pubsub-emulator/bin/cloud-pubsub-emulator --host=0.0.0.0 --port=8085
+pubsub-emulator-1     | [pubsub] This is the Google Pub/Sub fake.
+pubsub-emulator-1     | [pubsub] Implementation may be incomplete or differ from the real system.
+oficina-os-1          | INFO:     Started server process [1]
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:37 PM com.google.cloud.pubsub.testing.v1.Main main
+pubsub-emulator-1     | [pubsub] INFO: IAM integration is disabled. IAM policy methods and ACL checks are not supported
+pubsub-emulator-1     | [pubsub] SLF4J(W): No SLF4J providers were found.
+pubsub-emulator-1     | [pubsub] SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+pubsub-emulator-1     | [pubsub] SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+pubsub-emulator-1     | [pubsub] WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+oficina-os-1          | INFO:     Waiting for application startup.
+pubsub-emulator-1     | [pubsub] WARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/google-cloud-sdk/platform/pubsub-emulator/lib/cloud-pubsub-emulator-0.8.38-all.jar)
+pubsub-emulator-1     | [pubsub] WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2
+pubsub-emulator-1     | [pubsub] WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+pubsub-emulator-1     | [pubsub] WARNING: A restricted method in java.lang.System has been called
+pubsub-emulator-1     | [pubsub] WARNING: java.lang.System::loadLibrary has been called by io.grpc.netty.shaded.io.netty.util.internal.NativeLibraryUtil in an unnamed module (file:/google-cloud-sdk/platform/pubsub-emulator/lib/cloud-pubsub-emulator-0.8.38-all.jar)
+pubsub-emulator-1     | [pubsub] WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+pubsub-emulator-1     | [pubsub] WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+pubsub-emulator-1     | [pubsub] 
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:38 PM com.google.cloud.pubsub.testing.v1.Main main
+pubsub-emulator-1     | [pubsub] INFO: Server started, listening on 8085
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:41 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:42 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:43 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:46 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:54 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:54 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:28:56 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:01 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:06 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:11 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:16 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:26 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:31 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:36 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:41 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:47 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:52 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+pubsub-emulator-1     | [pubsub] Nov 17, 2026 5:29:57 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+pubsub-emulator-1     | [pubsub] INFO: Detected non-HTTP/2 connection.
+oficina-os-1          | INFO:     Application startup complete.
+oficina-os-1          | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+oficina-os-1          | INFO:     127.0.0.1:60334 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:60342 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:44388 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:44460 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:38972 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:38994 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:35172 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:35198 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:58192 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:58224 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:46626 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:16112 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "POST /auth/login HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /servicos HTTP/1.1" 404 Not Found
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /pecas HTTP/1.1" 404 Not Found
+oficina-os-1          | INFO:     172.21.0.7:54102 - "GET /.well-known/admin-jwks.json HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "POST /clientes HTTP/1.1" 201 Created
+oficina-os-1          | INFO:     192.168.65.1:23899 - "POST /veiculos HTTP/1.1" 201 Created
+oficina-os-1          | INFO:     192.168.65.1:23899 - "POST /v1/ordens-servico HTTP/1.1" 202 Accepted
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:51074 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     172.21.0.8:47274 - "GET /.well-known/admin-jwks.json HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+pubsub-init-1         | Pub/Sub inicializado com sucesso: {'topics': ['oficina-homolog-eventos-v1', 'oficina-homolog-billing-comandos-v1', 'oficina-homolog-execucao-comandos-v1', 'oficina-homolog-saga-dlq'], 'subscriptions': ['oficina-homolog-os-orquestrador-sub', 'oficina-homolog-notificacoes-sub', 'oficina-homolog-billing-comandos-sub', 'oficina-homolog-execucao-comandos-sub', 'oficina-homolog-saga-dlq-inspecao-sub']}
+oficina-billing-1     | INFO:     Started server process [1]
+oficina-billing-1     | INFO:     Waiting for application startup.
+oficina-billing-1     | INFO:     Application startup complete.
+oficina-billing-1     | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+oficina-billing-1     | INFO:     127.0.0.1:60348 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:44400 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:44446 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:38964 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:38990 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:35156 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:35192 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:58166 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:58210 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:64391 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:55776 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:51068 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:22440 - "POST /v1/orcamentos/bcd2234b-1b78-4e6a-b33d-0e4462843a02/decisao HTTP/1.1" 202 Accepted
+oficina-billing-1     | INFO:     127.0.0.1:51092 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:55949 - "GET /v1/pagamentos/por-os/0580387d-38f6-4231-881e-368eee45b443 HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:55949 - "POST /internal/fake-mp/ORD_TEST_000001/pagar HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:55949 - "POST /webhooks/mercadopago HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:47664 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     127.0.0.1:47690 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-billing-1     | INFO:     192.168.65.1:23326 - "GET /health/ready HTTP/1.1" 200 OK
+postgres-1            | The files belonging to this database system will be owned by user "postgres".
+postgres-1            | This user must also own the server process.
+postgres-1            | 
+postgres-1            | The database cluster will be initialized with locale "en_US.utf8".
+postgres-1            | The default database encoding has accordingly been set to "UTF8".
+postgres-1            | The default text search configuration will be set to "english".
+postgres-1            | 
+postgres-1            | Data page checksums are disabled.
+postgres-1            | 
+postgres-1            | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+postgres-1            | creating subdirectories ... ok
+postgres-1            | selecting dynamic shared memory implementation ... posix
+postgres-1            | selecting default max_connections ... 100
+postgres-1            | selecting default shared_buffers ... 128MB
+postgres-1            | selecting default time zone ... UTC
+postgres-1            | creating configuration files ... ok
+postgres-1            | running bootstrap script ... ok
+postgres-1            | sh: locale: not found
+postgres-1            | 2026-11-17 17:28:36.657 UTC [35] WARNING:  no usable system locales were found
+postgres-1            | performing post-bootstrap initialization ... ok
+postgres-1            | syncing data to disk ... ok
+postgres-1            | 
+postgres-1            | 
+postgres-1            | Success. You can now start the database server using:
+postgres-1            | 
+postgres-1            |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+postgres-1            | 
+postgres-1            | initdb: warning: enabling "trust" authentication for local connections
+postgres-1            | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+postgres-1            | waiting for server to start....2026-11-17 17:28:36.919 UTC [41] LOG:  starting PostgreSQL 16.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1            | 2026-11-17 17:28:36.920 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1            | 2026-11-17 17:28:36.922 UTC [44] LOG:  database system was shut down at 2026-11-17 17:28:36 UTC
+postgres-1            | 2026-11-17 17:28:36.924 UTC [41] LOG:  database system is ready to accept connections
+postgres-1            |  done
+postgres-1            | server started
+postgres-1            | 
+postgres-1            | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/01-init-isolated-dbs.sh
+postgres-1            | CREATE DATABASE
+postgres-1            | CREATE ROLE
+postgres-1            | REVOKE
+postgres-1            | GRANT
+postgres-1            | CREATE DATABASE
+postgres-1            | CREATE ROLE
+postgres-1            | REVOKE
+postgres-1            | GRANT
+postgres-1            | GRANT
+postgres-1            | ALTER DEFAULT PRIVILEGES
+postgres-1            | GRANT
+postgres-1            | ALTER DEFAULT PRIVILEGES
+postgres-1            | 
+postgres-1            | waiting for server to shut down....2026-11-17 17:28:37.100 UTC [41] LOG:  received fast shutdown request
+postgres-1            | 2026-11-17 17:28:37.101 UTC [41] LOG:  aborting any active transactions
+postgres-1            | 2026-11-17 17:28:37.102 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+postgres-1            | 2026-11-17 17:28:37.102 UTC [42] LOG:  shutting down
+postgres-1            | 2026-11-17 17:28:37.103 UTC [42] LOG:  checkpoint starting: shutdown immediate
+postgres-1            | 2026-11-17 17:28:37.147 UTC [42] LOG:  checkpoint complete: wrote 1861 buffers (11.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.026 s, sync=0.017 s, total=0.045 s; sync files=604, longest=0.010 s, average=0.001 s; distance=8573 kB, estimate=8573 kB; lsn=0/1D565F8, redo lsn=0/1D565F8
+postgres-1            | 2026-11-17 17:28:37.152 UTC [41] LOG:  database system is shut down
+postgres-1            |  done
+postgres-1            | server stopped
+postgres-1            | 
+postgres-1            | PostgreSQL init process complete; ready for start up.
+postgres-1            | 
+postgres-1            | 2026-11-17 17:28:37.212 UTC [1] LOG:  starting PostgreSQL 16.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1            | 2026-11-17 17:28:37.212 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1            | 2026-11-17 17:28:37.212 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres-1            | 2026-11-17 17:28:37.213 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1            | 2026-11-17 17:28:37.215 UTC [62] LOG:  database system was shut down at 2026-11-17 17:28:37 UTC
+postgres-1            | 2026-11-17 17:28:37.231 UTC [1] LOG:  database system is ready to accept connections
+postgres-1            | 2026-11-17 17:29:12.373 UTC [149] ERROR:  update or delete on table "ordens_de_servico" violates foreign key constraint "historico_os_os_id_fkey" on table "historico_os"
+postgres-1            | 2026-11-17 17:29:12.373 UTC [149] DETAIL:  Key (id)=(4c7a1e0d-b344-4d17-a5ce-fd2bfcee200e) is still referenced from table "historico_os".
+postgres-1            | 2026-11-17 17:29:12.373 UTC [149] STATEMENT:  DELETE FROM ordens_de_servico WHERE ordens_de_servico.id = $1::UUID
+execucao-worker-1     | {"timestamp": "2026-11-17 17:28:54,459", "level": "INFO", "name": "oficina-execucao-worker", "message": "Worker Execu\u00e7\u00e3o iniciado (env=homolog, sub=oficina-homolog-execucao-comandos-sub)", "dd.service": "oficina-execucao-worker", "dd.env": "homolog", "dd.version": "0.1.0", "dd.trace_id": "0", "dd.span_id": "0", "correlation_id": "", "saga_id": "", "os_id": "", "event_id": ""}
+billing-worker-1      | {"timestamp": "2026-11-17 17:28:54,649", "level": "INFO", "name": "oficina-billing-worker", "message": "Worker Billing iniciado (env=homolog, sub=oficina-homolog-billing-comandos-sub)", "dd.service": "oficina-billing-worker", "dd.env": "homolog", "dd.version": "0.1.0", "dd.trace_id": "0", "dd.span_id": "0", "correlation_id": "", "saga_id": "", "os_id": "", "event_id": ""}
+os-worker-1           | {"timestamp": "2026-11-17 17:28:43,237", "level": "INFO", "name": "os-saga-worker", "message": "Worker OS Saga iniciado (env=homolog, sub=oficina-homolog-os-orquestrador-sub)", "dd.service": "oficina-api-worker", "dd.env": "homolog", "dd.version": "0.2.0", "dd.trace_id": "0", "dd.span_id": "0", "correlation_id": "", "saga_id": "", "os_id": "", "event_id": ""}
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:51102 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:47678 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     127.0.0.1:47704 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "GET /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/saga HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:23899 - "POST /v1/ordens-servico/0580387d-38f6-4231-881e-368eee45b443/entrega HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:34314 - "GET /health/ready HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:21448 - "POST /auth/login HTTP/1.1" 200 OK
+oficina-os-1          | INFO:     192.168.65.1:21448 - "POST /clientes HTTP/1.1" 409 Conflict
+oficina-os-1          | INFO:     192.168.65.1:21448 - "GET /clientes HTTP/1.1" 500 Internal Server Error
+oficina-os-1          | ERROR:    Exception in ASGI application
+oficina-os-1          | Traceback (most recent call last):
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 411, in run_asgi
+oficina-os-1          |     result = await app(  # type: ignore[func-returns-value]
+oficina-os-1          |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+oficina-os-1          |     return await self.app(scope, receive, send)
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1194, in __call__
+oficina-os-1          |     await super().__call__(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/applications.py", line 96, in __call__
+oficina-os-1          |     await self.middleware_stack(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+oficina-os-1          |     raise exc
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+oficina-os-1          |     await self.app(scope, receive, _send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+oficina-os-1          |     await self.app(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 91, in __call__
+oficina-os-1          |     await self.simple_response(scope, receive, send, request_headers=headers)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 149, in simple_response
+oficina-os-1          |     await self.app(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+oficina-os-1          |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+oficina-os-1          |     raise exc
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+oficina-os-1          |     await app(scope, receive, sender)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+oficina-os-1          |     await self.app(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/routing.py", line 683, in __call__
+oficina-os-1          |     await self.middleware_stack(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 2811, in app
+oficina-os-1          |     await route.handle(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 1839, in handle
+oficina-os-1          |     await self.original_router.handle(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 2894, in handle
+oficina-os-1          |     await included_router._handle_selected(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 1865, in _handle_selected
+oficina-os-1          |     await original_route.handle(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 1328, in handle
+oficina-os-1          |     await effective_context.app(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 166, in app
+oficina-os-1          |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+oficina-os-1          |     raise exc
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+oficina-os-1          |     await app(scope, receive, sender)
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 152, in app
+oficina-os-1          |     response = await f(request)
+oficina-os-1          |                ^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 745, in app
+oficina-os-1          |     raw_response = await run_endpoint_function(
+oficina-os-1          |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 374, in run_endpoint_function
+oficina-os-1          |     return await run_in_threadpool(
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/starlette/concurrency.py", line 34, in run_in_threadpool
+oficina-os-1          |     return await anyio.to_thread.run_sync(func)
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/anyio/to_thread.py", line 65, in run_sync
+oficina-os-1          |     return await get_async_backend().run_sync_in_worker_thread(
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2779, in run_sync_in_worker_thread
+oficina-os-1          |     return await future
+oficina-os-1          |            ^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 1124, in run
+oficina-os-1          |     result = context.run(func, *args)
+oficina-os-1          |              ^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/fastapi/telemetry/_api.py", line 244, in _run_sync_endpoint
+oficina-os-1          |     return function(**arguments)
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/app/src/atendimento/apresentacao/rotas.py", line 146, in listar_clientes
+oficina-os-1          |     clientes = caso_de_uso.executar(busca)
+oficina-os-1          |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/app/src/atendimento/aplicacao/casos_de_uso.py", line 66, in executar
+oficina-os-1          |     return self.repo.listar(busca)
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/app/src/atendimento/infraestrutura/repositorios.py", line 69, in listar
+oficina-os-1          |     return [self._para_entidade(m) for m in q.all()]
+oficina-os-1          |                                             ^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2768, in all
+oficina-os-1          |     return self._iter().all()  # type: ignore[return-value]
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/engine/result.py", line 1380, in all
+oficina-os-1          |     return self._allrows()
+oficina-os-1          |            ^^^^^^^^^^^^^^^
+oficina-os-1          |   File "lib/sqlalchemy/engine/_result_cy.py", line 364, in sqlalchemy.engine._result_cy.BaseResultInternal._allrows
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/engine/result.py", line 1285, in _fetchall_impl
+oficina-os-1          |     return self._real_result._fetchall_impl()
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/engine/result.py", line 1901, in _fetchall_impl
+oficina-os-1          |     return list(self.iterator)
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/orm/loading.py", line 233, in chunks
+oficina-os-1          |     fetch = cursor._raw_all_tuples()
+oficina-os-1          |             ^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "lib/sqlalchemy/engine/_result_cy.py", line 357, in sqlalchemy.engine._result_cy.BaseResultInternal._raw_all_tuples
+oficina-os-1          |   File "lib/sqlalchemy/engine/_result_cy.py", line 112, in sqlalchemy.engine._result_cy._list_map.list_map
+oficina-os-1          |   File "lib/sqlalchemy/engine/_result_cy.py", line 291, in sqlalchemy.engine._result_cy.BaseResultInternal._row_getter.single_interim_row
+oficina-os-1          |   File "lib/sqlalchemy/engine/_result_cy.py", line 674, in sqlalchemy.engine._result_cy._apply_processors
+oficina-os-1          |   File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/sql/type_api.py", line 2279, in process
+oficina-os-1          |     return fixed_process_value(value, dialect)
+oficina-os-1          |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+oficina-os-1          |   File "/app/src/atendimento/infraestrutura/modelos.py", line 24, in process_result_value
+oficina-os-1          |     return CPF(value) if value else None
+oficina-os-1          |            ^^^^^^^^^^
+oficina-os-1          |   File "<string>", line 4, in __init__
+oficina-os-1          |   File "/app/src/atendimento/dominio/value_objects.py", line 177, in __post_init__
+oficina-os-1          |     raise ValueError(f"CPF inválido: {self.valor}")
+oficina-os-1          | ValueError: CPF inválido: 13424244759
+
