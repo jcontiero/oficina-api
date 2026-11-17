@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oficina.internal/schemas/comandos-saga-v1.schema.json",
+  "title": "ComandosSagaV1",
+  "description": "Payloads dos comandos emitidos pelo Orquestrador da Saga (OS Service)",
+  "$defs": {
+    "ItemServicoSnapshot": {
+      "type": "object",
+      "required": ["servico_id", "descricao", "preco_unitario_centavos"],
+      "additionalProperties": false,
+      "properties": {
+        "servico_id": { "type": "string", "format": "uuid" },
+        "descricao": { "type": "string", "minLength": 1 },
+        "preco_unitario_centavos": { "type": "integer", "minimum": 0 },
+        "observacao": { "type": "string" }
+      }
+    },
+    "ItemPecaSnapshot": {
+      "type": "object",
+      "required": ["peca_id", "descricao", "quantidade", "preco_unitario_centavos"],
+      "additionalProperties": false,
+      "properties": {
+        "peca_id": { "type": "string", "format": "uuid" },
+        "descricao": { "type": "string", "minLength": 1 },
+        "quantidade": { "type": "integer", "minimum": 1 },
+        "preco_unitario_centavos": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "SolicitarDiagnostico.v1": {
+      "type": "object",
+      "required": ["rodada", "cliente_id", "veiculo_id", "descricao_problema"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "cliente_id": { "type": "string", "format": "uuid" },
+        "veiculo_id": { "type": "string", "format": "uuid" },
+        "descricao_problema": { "type": "string", "minLength": 1 },
+        "servicos_iniciais": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemServicoSnapshot" }
+        },
+        "pecas_iniciais": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemPecaSnapshot" }
+        }
+      }
+    },
+    "GerarOrcamento.v1": {
+      "type": "object",
+      "required": ["rodada", "versao", "cliente_id", "itens_servico", "itens_peca"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "versao": { "type": "integer", "minimum": 1 },
+        "cliente_id": { "type": "string", "format": "uuid" },
+        "laudo_diagnostico": { "type": "string" },
+        "itens_servico": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ItemServicoSnapshot" }
+        },
+        "itens_peca": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemPecaSnapshot" }
+        }
+      }
+    },
+    "ReservarPecas.v1": {
+      "type": "object",
+      "required": ["rodada", "reserva_id", "orcamento_id", "orcamento_versao", "itens_peca"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "orcamento_versao": { "type": "integer", "minimum": 1 },
+        "itens_peca": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemPecaSnapshot" }
+        }
+      }
+    },
+    "CriarCobranca.v1": {
+      "type": "object",
+      "required": ["rodada", "orcamento_id", "orcamento_versao", "cliente_id", "total_centavos", "moeda"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "orcamento_versao": { "type": "integer", "minimum": 1 },
+        "cliente_id": { "type": "string", "format": "uuid" },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" }
+      }
+    },
+    "EnfileirarExecucao.v1": {
+      "type": "object",
+      "required": ["rodada", "reserva_id", "orcamento_id", "pagamento_id", "itens_servico", "itens_peca"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "itens_servico": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ItemServicoSnapshot" }
+        },
+        "itens_peca": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemPecaSnapshot" }
+        }
+      }
+    },
+    "CancelarExecucao.v1": {
+      "type": "object",
+      "required": ["rodada", "motivo", "compensacao_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "motivo": {
+          "type": "string",
+          "enum": [
+            "FALHA_ENFILEIRAMENTO",
+            "FALHA_COBRANCA",
+            "PAGAMENTO_EXPIRADO",
+            "PAGAMENTO_RECUSADO",
+            "ORCAMENTO_RECUSADO",
+            "ESTOQUE_INSUFICIENTE",
+            "TIMEOUT_DIAGNOSTICO",
+            "TIMEOUT_ORCAMENTO"
+          ]
+        },
+        "execucao_id": { "type": ["string", "null"], "format": "uuid" }
+      }
+    },
+    "LiberarReserva.v1": {
+      "type": "object",
+      "required": ["rodada", "motivo", "compensacao_id", "reserva_id", "execucao_cancelada_event_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "minLength": 1 },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "execucao_cancelada_event_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "CancelarOrcamento.v1": {
+      "type": "object",
+      "required": ["rodada", "motivo", "compensacao_id", "orcamento_id", "orcamento_versao", "execucao_cancelada_event_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "minLength": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "orcamento_versao": { "type": "integer", "minimum": 1 },
+        "execucao_cancelada_event_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "CancelarCobranca.v1": {
+      "type": "object",
+      "required": ["rodada", "motivo", "compensacao_id", "execucao_cancelada_event_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "minLength": 1 },
+        "pagamento_id": { "type": ["string", "null"], "format": "uuid" },
+        "execucao_cancelada_event_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "EstornarPagamento.v1": {
+      "type": "object",
+      "required": ["rodada", "motivo", "compensacao_id", "pagamento_id", "total_centavos", "moeda", "execucao_cancelada_event_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "minLength": 1 },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" },
+        "execucao_cancelada_event_id": { "type": "string", "format": "uuid" }
+      }
+    }
+  }
+}

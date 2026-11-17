@@ -22,8 +22,11 @@ class StatusOS(str, Enum):
     EM_DIAGNOSTICO = "EM_DIAGNOSTICO"
     AGUARDANDO_ORCAMENTO = "AGUARDANDO_ORCAMENTO"
     AGUARDANDO_APROVACAO = "AGUARDANDO_APROVACAO"
+    AGUARDANDO_PAGAMENTO = "AGUARDANDO_PAGAMENTO"
+    AGUARDANDO_EXECUCAO = "AGUARDANDO_EXECUCAO"
     EM_EXECUCAO = "EM_EXECUCAO"
     SERVICOS_CONCLUIDOS = "SERVICOS_CONCLUIDOS"
+    COMPENSACAO_PENDENTE = "COMPENSACAO_PENDENTE"
     FINALIZADA = "FINALIZADA"
     ENTREGUE = "ENTREGUE"
     CANCELADA = "CANCELADA"
@@ -33,23 +36,60 @@ class StatusOSFase2(str, Enum):
     RECEBIDA = "Recebida"
     DIAGNOSTICO = "Diagnóstico"
     AGUARDANDO_APROVACAO = "Aguardando Aprovação"
+    AGUARDANDO_PAGAMENTO = "Aguardando Pagamento"
+    AGUARDANDO_EXECUCAO = "Aguardando Execução"
     EXECUCAO = "Execução"
+    COMPENSACAO_PENDENTE = "Compensação Pendente"
     FINALIZADA = "Finalizada"
     ENTREGUE = "Entregue"
     CANCELADA = "Cancelada"
 
 
 TRANSICOES_VALIDAS = {
-    StatusOS.RECEBIDA: [StatusOS.EM_DIAGNOSTICO, StatusOS.AGUARDANDO_APROVACAO],
-    StatusOS.EM_DIAGNOSTICO: [StatusOS.AGUARDANDO_ORCAMENTO],
-    StatusOS.AGUARDANDO_ORCAMENTO: [StatusOS.AGUARDANDO_APROVACAO],
+    StatusOS.RECEBIDA: [
+        StatusOS.EM_DIAGNOSTICO,
+        StatusOS.AGUARDANDO_APROVACAO,
+        StatusOS.CANCELADA,
+    ],
+    StatusOS.EM_DIAGNOSTICO: [
+        StatusOS.AGUARDANDO_ORCAMENTO,
+        StatusOS.AGUARDANDO_APROVACAO,
+        StatusOS.COMPENSACAO_PENDENTE,
+        StatusOS.CANCELADA,
+    ],
+    StatusOS.AGUARDANDO_ORCAMENTO: [
+        StatusOS.AGUARDANDO_APROVACAO,
+        StatusOS.COMPENSACAO_PENDENTE,
+        StatusOS.CANCELADA,
+    ],
     StatusOS.AGUARDANDO_APROVACAO: [
+        StatusOS.AGUARDANDO_PAGAMENTO,
         StatusOS.EM_EXECUCAO,
+        StatusOS.EM_DIAGNOSTICO,
+        StatusOS.COMPENSACAO_PENDENTE,
+        StatusOS.CANCELADA,
+    ],
+    StatusOS.AGUARDANDO_PAGAMENTO: [
+        StatusOS.AGUARDANDO_EXECUCAO,
+        StatusOS.EM_EXECUCAO,
+        StatusOS.EM_DIAGNOSTICO,
+        StatusOS.COMPENSACAO_PENDENTE,
+        StatusOS.CANCELADA,
+    ],
+    StatusOS.AGUARDANDO_EXECUCAO: [
+        StatusOS.EM_EXECUCAO,
+        StatusOS.COMPENSACAO_PENDENTE,
+        StatusOS.CANCELADA,
+    ],
+    StatusOS.EM_EXECUCAO: [
+        StatusOS.SERVICOS_CONCLUIDOS,
+        StatusOS.COMPENSACAO_PENDENTE,
+    ],
+    StatusOS.SERVICOS_CONCLUIDOS: [StatusOS.FINALIZADA],
+    StatusOS.COMPENSACAO_PENDENTE: [
         StatusOS.EM_DIAGNOSTICO,
         StatusOS.CANCELADA,
     ],
-    StatusOS.EM_EXECUCAO: [StatusOS.SERVICOS_CONCLUIDOS],
-    StatusOS.SERVICOS_CONCLUIDOS: [StatusOS.FINALIZADA],
     StatusOS.FINALIZADA: [StatusOS.ENTREGUE],
     StatusOS.ENTREGUE: [],
     StatusOS.CANCELADA: [],
@@ -58,9 +98,11 @@ TRANSICOES_VALIDAS = {
 
 PRIORIDADE_LISTAGEM_FASE2: dict[StatusOSFase2, int] = {
     StatusOSFase2.EXECUCAO: 1,
-    StatusOSFase2.AGUARDANDO_APROVACAO: 2,
-    StatusOSFase2.DIAGNOSTICO: 3,
-    StatusOSFase2.RECEBIDA: 4,
+    StatusOSFase2.AGUARDANDO_EXECUCAO: 2,
+    StatusOSFase2.AGUARDANDO_PAGAMENTO: 3,
+    StatusOSFase2.AGUARDANDO_APROVACAO: 4,
+    StatusOSFase2.DIAGNOSTICO: 5,
+    StatusOSFase2.RECEBIDA: 6,
 }
 
 
@@ -70,8 +112,11 @@ def para_status_fase2(status: StatusOS) -> StatusOSFase2:
         StatusOS.EM_DIAGNOSTICO: StatusOSFase2.DIAGNOSTICO,
         StatusOS.AGUARDANDO_ORCAMENTO: StatusOSFase2.AGUARDANDO_APROVACAO,
         StatusOS.AGUARDANDO_APROVACAO: StatusOSFase2.AGUARDANDO_APROVACAO,
+        StatusOS.AGUARDANDO_PAGAMENTO: StatusOSFase2.AGUARDANDO_PAGAMENTO,
+        StatusOS.AGUARDANDO_EXECUCAO: StatusOSFase2.AGUARDANDO_EXECUCAO,
         StatusOS.EM_EXECUCAO: StatusOSFase2.EXECUCAO,
         StatusOS.SERVICOS_CONCLUIDOS: StatusOSFase2.EXECUCAO,
+        StatusOS.COMPENSACAO_PENDENTE: StatusOSFase2.COMPENSACAO_PENDENTE,
         StatusOS.FINALIZADA: StatusOSFase2.FINALIZADA,
         StatusOS.ENTREGUE: StatusOSFase2.ENTREGUE,
         StatusOS.CANCELADA: StatusOSFase2.CANCELADA,
@@ -100,7 +145,16 @@ def para_status_interno(status_fase2: str) -> StatusOS:
         _normalizar_status(
             StatusOSFase2.AGUARDANDO_APROVACAO.value
         ): StatusOS.AGUARDANDO_APROVACAO,
+        _normalizar_status(
+            StatusOSFase2.AGUARDANDO_PAGAMENTO.value
+        ): StatusOS.AGUARDANDO_PAGAMENTO,
+        _normalizar_status(
+            StatusOSFase2.AGUARDANDO_EXECUCAO.value
+        ): StatusOS.AGUARDANDO_EXECUCAO,
         _normalizar_status(StatusOSFase2.EXECUCAO.value): StatusOS.EM_EXECUCAO,
+        _normalizar_status(
+            StatusOSFase2.COMPENSACAO_PENDENTE.value
+        ): StatusOS.COMPENSACAO_PENDENTE,
         _normalizar_status(StatusOSFase2.FINALIZADA.value): StatusOS.FINALIZADA,
         _normalizar_status(StatusOSFase2.ENTREGUE.value): StatusOS.ENTREGUE,
         _normalizar_status(StatusOSFase2.CANCELADA.value): StatusOS.CANCELADA,

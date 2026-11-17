@@ -822,6 +822,7 @@ class ListarOrdensDeServicoAtivas:
                 StatusOSFase2.FINALIZADA,
                 StatusOSFase2.ENTREGUE,
                 StatusOSFase2.CANCELADA,
+                StatusOSFase2.COMPENSACAO_PENDENTE,
             )
         ]
         return sorted(

@@ -1,0 +1,497 @@
+{
+  "fluxo_feliz": [
+    {
+      "event_id": "11111111-1111-4111-8111-111111111101",
+      "event_type": "SolicitarDiagnostico.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:00:00Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111101",
+      "aggregate_version": 1,
+      "payload": {
+        "rodada": 1,
+        "cliente_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "veiculo_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "descricao_problema": "Ruído metálico ao frear",
+        "servicos_iniciais": [],
+        "pecas_iniciais": []
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111102",
+      "event_type": "DiagnosticoConcluido.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:05:00Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111101",
+      "aggregate_version": 1,
+      "payload": {
+        "rodada": 1,
+        "diagnostico_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb_1",
+        "laudo": "Substituição de pastilhas dianteiras e revisão do sistema de freio",
+        "itens_servico": [
+          {
+            "servico_id": "22222222-2222-4222-8222-222222222201",
+            "descricao": "Troca de pastilhas de freio",
+            "preco_unitario_centavos": 12000,
+            "observacao": "Eixo dianteiro"
+          }
+        ],
+        "itens_peca": [
+          {
+            "peca_id": "33333333-3333-4333-8333-333333333301",
+            "descricao": "Jogo de pastilhas cerâmicas",
+            "quantidade": 1,
+            "preco_unitario_centavos": 18000
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111103",
+      "event_type": "GerarOrcamento.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:05:01Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111102",
+      "aggregate_version": 2,
+      "payload": {
+        "rodada": 1,
+        "versao": 1,
+        "cliente_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "laudo_diagnostico": "Substituição de pastilhas dianteiras e revisão do sistema de freio",
+        "itens_servico": [
+          {
+            "servico_id": "22222222-2222-4222-8222-222222222201",
+            "descricao": "Troca de pastilhas de freio",
+            "preco_unitario_centavos": 12000,
+            "observacao": "Eixo dianteiro"
+          }
+        ],
+        "itens_peca": [
+          {
+            "peca_id": "33333333-3333-4333-8333-333333333301",
+            "descricao": "Jogo de pastilhas cerâmicas",
+            "quantidade": 1,
+            "preco_unitario_centavos": 18000
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111104",
+      "event_type": "OrcamentoGerado.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:05:02Z",
+      "producer": "oficina-billing",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111103",
+      "aggregate_version": 1,
+      "payload": {
+        "rodada": 1,
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "versao": 1,
+        "total_centavos": 30000,
+        "moeda": "BRL"
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111105",
+      "event_type": "OrcamentoAprovado.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:10:00Z",
+      "producer": "oficina-billing",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111104",
+      "aggregate_version": 2,
+      "payload": {
+        "rodada": 1,
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "versao": 1,
+        "cliente_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "total_centavos": 30000,
+        "moeda": "BRL"
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111106",
+      "event_type": "ReservarPecas.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:10:01Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111105",
+      "aggregate_version": 3,
+      "payload": {
+        "rodada": 1,
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "orcamento_versao": 1,
+        "itens_peca": [
+          {
+            "peca_id": "33333333-3333-4333-8333-333333333301",
+            "descricao": "Jogo de pastilhas cerâmicas",
+            "quantidade": 1,
+            "preco_unitario_centavos": 18000
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111107",
+      "event_type": "PecasReservadas.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:10:02Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111106",
+      "aggregate_version": 2,
+      "payload": {
+        "rodada": 1,
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "status": "RESERVADA"
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111108",
+      "event_type": "CriarCobranca.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:10:03Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111107",
+      "aggregate_version": 4,
+      "payload": {
+        "rodada": 1,
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "orcamento_versao": 1,
+        "cliente_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "total_centavos": 30000,
+        "moeda": "BRL"
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111109",
+      "event_type": "CobrancaCriada.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:10:04Z",
+      "producer": "oficina-billing",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111108",
+      "aggregate_version": 3,
+      "payload": {
+        "rodada": 1,
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "pagamento_id": "55555555-5555-4555-8555-555555555501",
+        "provider_order_id": "ORD01J8MPQRDYNAMIC001",
+        "qr_data": "00020101021243650016COM.MERCADOLIBRE020130636ORD01J8MPQRDYNAMIC001",
+        "total_centavos": 30000,
+        "moeda": "BRL"
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111110",
+      "event_type": "PagamentoConfirmado.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:00Z",
+      "producer": "oficina-billing",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111109",
+      "aggregate_version": 4,
+      "payload": {
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "pagamento_id": "55555555-5555-4555-8555-555555555501",
+        "provider_order_id": "ORD01J8MPQRDYNAMIC001",
+        "total_centavos": 30000,
+        "moeda": "BRL",
+        "orcamento_versao": 1
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111111",
+      "event_type": "EnfileirarExecucao.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:01Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111110",
+      "aggregate_version": 5,
+      "payload": {
+        "rodada": 1,
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "pagamento_id": "55555555-5555-4555-8555-555555555501",
+        "itens_servico": [
+          {
+            "servico_id": "22222222-2222-4222-8222-222222222201",
+            "descricao": "Troca de pastilhas de freio",
+            "preco_unitario_centavos": 12000,
+            "observacao": "Eixo dianteiro"
+          }
+        ],
+        "itens_peca": [
+          {
+            "peca_id": "33333333-3333-4333-8333-333333333301",
+            "descricao": "Jogo de pastilhas cerâmicas",
+            "quantidade": 1,
+            "preco_unitario_centavos": 18000
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111112",
+      "event_type": "ExecucaoEnfileirada.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:02Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111111",
+      "aggregate_version": 3,
+      "payload": {
+        "rodada": 1,
+        "execucao_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb_1",
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "status": "AGUARDANDO_EXECUCAO"
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111113",
+      "event_type": "ExecucaoIniciada.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:20:00Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111112",
+      "aggregate_version": 4,
+      "payload": {
+        "rodada": 1,
+        "execucao_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb_1",
+        "reserva_consumida": true
+      }
+    },
+    {
+      "event_id": "11111111-1111-4111-8111-111111111114",
+      "event_type": "ExecucaoConcluida.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T16:00:00Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111113",
+      "aggregate_version": 5,
+      "payload": {
+        "rodada": 1,
+        "execucao_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb_1",
+        "concluida_em": "2026-11-16T16:00:00Z"
+      }
+    }
+  ],
+  "compensacao_falha_fila_apos_pagamento": [
+    {
+      "event_id": "99999999-9999-4999-8999-999999999901",
+      "event_type": "ExecucaoRejeitada.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:02Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "11111111-1111-4111-8111-111111111111",
+      "aggregate_version": 3,
+      "payload": {
+        "rodada": 1,
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "motivo": "FALHA_FORTE_FILA"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999902",
+      "event_type": "CancelarExecucao.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:03Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999901",
+      "aggregate_version": 6,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "motivo": "FALHA_ENFILEIRAMENTO",
+        "execucao_id": null
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999903",
+      "event_type": "ExecucaoCancelada.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:04Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999902",
+      "aggregate_version": 4,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "resultado": "CANCELADA",
+        "motivo": "FALHA_ENFILEIRAMENTO",
+        "execucao_id": null,
+        "tombstone_persistido": true
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999904",
+      "event_type": "LiberarReserva.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:05Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999903",
+      "aggregate_version": 7,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "motivo": "FALHA_ENFILEIRAMENTO",
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "execucao_cancelada_event_id": "99999999-9999-4999-8999-999999999903"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999905",
+      "event_type": "CancelarOrcamento.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:05Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999903",
+      "aggregate_version": 7,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "motivo": "FALHA_ENFILEIRAMENTO",
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "orcamento_versao": 1,
+        "execucao_cancelada_event_id": "99999999-9999-4999-8999-999999999903"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999906",
+      "event_type": "EstornarPagamento.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:05Z",
+      "producer": "oficina-os",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999903",
+      "aggregate_version": 7,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "motivo": "FALHA_ENFILEIRAMENTO",
+        "pagamento_id": "55555555-5555-4555-8555-555555555501",
+        "total_centavos": 30000,
+        "moeda": "BRL",
+        "execucao_cancelada_event_id": "99999999-9999-4999-8999-999999999903"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999907",
+      "event_type": "ReservaLiberada.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:06Z",
+      "producer": "oficina-execucao",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999904",
+      "aggregate_version": 5,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "reserva_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "resultado": "LIBERADA",
+        "motivo": "FALHA_ENFILEIRAMENTO"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999908",
+      "event_type": "OrcamentoCancelado.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:06Z",
+      "producer": "oficina-billing",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999905",
+      "aggregate_version": 5,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "orcamento_id": "44444444-4444-4444-8444-444444444401",
+        "resultado": "CANCELADO",
+        "motivo": "FALHA_ENFILEIRAMENTO"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999909",
+      "event_type": "PagamentoEstornado.v1",
+      "schema_version": 1,
+      "occurred_at": "2026-11-16T15:12:07Z",
+      "producer": "oficina-billing",
+      "saga_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "os_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "correlation_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "causation_id": "99999999-9999-4999-8999-999999999906",
+      "aggregate_version": 6,
+      "payload": {
+        "rodada": 1,
+        "compensacao_id": "77777777-7777-4777-8777-777777777701",
+        "pagamento_id": "55555555-5555-4555-8555-555555555501",
+        "provider_order_id": "ORD01J8MPQRDYNAMIC001",
+        "total_centavos": 30000,
+        "moeda": "BRL",
+        "resultado": "ESTORNADO",
+        "motivo": "FALHA_ENFILEIRAMENTO"
+      }
+    }
+  ]
+}

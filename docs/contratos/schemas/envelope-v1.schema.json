@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oficina.internal/schemas/envelope-v1.schema.json",
+  "title": "EnvelopeCanônicoMensageriaV1",
+  "description": "Envelope obrigatório para todos os comandos e eventos Pub/Sub da Fase 4",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "producer",
+    "saga_id",
+    "os_id",
+    "correlation_id",
+    "causation_id",
+    "aggregate_version",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 estável gerado no momento da gravação na outbox"
+    },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]+\\.v1$",
+      "description": "Nome versionado do comando ou evento (ex.: PagamentoConfirmado.v1)"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp UTC em formato RFC3339"
+    },
+    "producer": {
+      "type": "string",
+      "enum": ["oficina-os", "oficina-billing", "oficina-execucao"]
+    },
+    "saga_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID da instância da Saga (por rodada de atendimento)"
+    },
+    "os_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID da Ordem de Serviço"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID preservado de ponta a ponta desde a requisição inicial"
+    },
+    "causation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "event_id do comando ou evento imediatamente causador"
+    },
+    "aggregate_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}
