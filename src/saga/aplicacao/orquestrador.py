@@ -34,20 +34,32 @@ DEADLINE_POR_ESTADO_SEGUNDOS: dict[EstadoSaga, int] = {
     EstadoSaga.ENFILEIRANDO: 120,
 }
 
+CMD_RESERVAR_PECAS = "ReservarPecas.v1"
+EVT_RESERVA_RECUSADA = "ReservaRecusada.v1"
+CMD_ENFILEIRAR_EXECUCAO = "EnfileirarExecucao.v1"
+EVT_EXECUCAO_REJEITADA = "ExecucaoRejeitada.v1"
+CMD_CANCELAR_EXECUCAO = "CancelarExecucao.v1"
+CMD_LIBERAR_RESERVA = "LiberarReserva.v1"
+EVT_RESERVA_LIBERADA = "ReservaLiberada.v1"
+EVT_ORCAMENTO_CANCELADO = "OrcamentoCancelado.v1"
+CMD_ESTORNAR_PAGAMENTO = "EstornarPagamento.v1"
+EVT_PAGAMENTO_ESTORNADO = "PagamentoEstornado.v1"
+MSG_SAGA_NAO_ENCONTRADA = "Saga não encontrada para a OS"
+
 COMANDO_POR_EVENTO_RESPOSTA: dict[str, str] = {
     "DiagnosticoConcluido.v1": "SolicitarDiagnostico.v1",
     "OrcamentoGerado.v1": "GerarOrcamento.v1",
-    "PecasReservadas.v1": "ReservarPecas.v1",
-    "ReservaRecusada.v1": "ReservarPecas.v1",
-    "ExecucaoEnfileirada.v1": "EnfileirarExecucao.v1",
-    "ExecucaoRejeitada.v1": "EnfileirarExecucao.v1",
-    "ExecucaoCancelada.v1": "CancelarExecucao.v1",
-    "ExecucaoCancelamentoRecusado.v1": "CancelarExecucao.v1",
-    "ReservaLiberada.v1": "LiberarReserva.v1",
-    "ReservaLiberacaoRecusada.v1": "LiberarReserva.v1",
-    "OrcamentoCancelado.v1": "CancelarOrcamento.v1",
-    "PagamentoEstornado.v1": "EstornarPagamento.v1",
-    "PagamentoEstornoFalhou.v1": "EstornarPagamento.v1",
+    "PecasReservadas.v1": CMD_RESERVAR_PECAS,
+    EVT_RESERVA_RECUSADA: CMD_RESERVAR_PECAS,
+    "ExecucaoEnfileirada.v1": CMD_ENFILEIRAR_EXECUCAO,
+    EVT_EXECUCAO_REJEITADA: CMD_ENFILEIRAR_EXECUCAO,
+    "ExecucaoCancelada.v1": CMD_CANCELAR_EXECUCAO,
+    "ExecucaoCancelamentoRecusado.v1": CMD_CANCELAR_EXECUCAO,
+    EVT_RESERVA_LIBERADA: CMD_LIBERAR_RESERVA,
+    "ReservaLiberacaoRecusada.v1": CMD_LIBERAR_RESERVA,
+    EVT_ORCAMENTO_CANCELADO: "CancelarOrcamento.v1",
+    EVT_PAGAMENTO_ESTORNADO: CMD_ESTORNAR_PAGAMENTO,
+    "PagamentoEstornoFalhou.v1": CMD_ESTORNAR_PAGAMENTO,
 }
 
 
@@ -220,7 +232,7 @@ class OrquestradorSaga:
         )
         return saga
 
-    def _aplicar_evento(
+    def _aplicar_fluxo_principal(
         self,
         saga: SagaInstanceModel,
         os_model: OrdemDeServicoModel,
@@ -266,7 +278,7 @@ class OrquestradorSaga:
             self._enfileirar_comando(
                 saga=saga,
                 destino="execucao",
-                event_type="ReservarPecas.v1",
+                event_type=CMD_RESERVAR_PECAS,
                 causation_id=envelope.event_id,
                 payload={
                     "rodada": saga.rodada,
@@ -303,6 +315,22 @@ class OrquestradorSaga:
             )
             return True
 
+        return self._aplicar_pagamento_e_execucao(
+            saga, os_model, envelope, traceparent=traceparent
+        )
+
+    def _aplicar_pagamento_e_execucao(
+        self,
+        saga: SagaInstanceModel,
+        os_model: OrdemDeServicoModel,
+        envelope: Any,
+        *,
+        traceparent: str | None = None,
+    ) -> bool:
+        evt = envelope.event_type
+        payload = envelope.payload
+        estado = EstadoSaga(saga.estado)
+
         if evt == "CobrancaCriada.v1" and estado == EstadoSaga.CRIANDO_COBRANCA:
             saga.pagamento_id = str(payload["pagamento_id"])
             self._registrar_status_os(os_model, StatusOS.AGUARDANDO_PAGAMENTO)
@@ -318,7 +346,7 @@ class OrquestradorSaga:
             self._enfileirar_comando(
                 saga=saga,
                 destino="execucao",
-                event_type="EnfileirarExecucao.v1",
+                event_type=CMD_ENFILEIRAR_EXECUCAO,
                 causation_id=envelope.event_id,
                 payload={
                     "rodada": saga.rodada,
@@ -360,15 +388,97 @@ class OrquestradorSaga:
             self._transicionar_saga(saga, EstadoSaga.CONCLUIDA)
             return True
 
+        return False
+
+    def _aplicar_execucao_cancelada(
+        self,
+        saga: SagaInstanceModel,
+        envelope: Any,
+        *,
+        traceparent: str | None = None,
+    ) -> None:
+        saga.execucao_cancelada_event_id = str(envelope.event_id)
+        saga.subestado_compensacao = SubestadoCompensacao.EXECUTANDO_COMPENSACOES.value
+        self._transicionar_saga(saga, EstadoSaga.COMPENSANDO_EFEITOS)
+        comp_id = saga.compensacao_id or str(uuid4())
+        motivo = saga.motivo_compensacao or MotivoCompensacao.FALHA_ENFILEIRAMENTO.value
+        esperados = ["RESERVA"]
+        if saga.orcamento_id:
+            esperados.append("ORCAMENTO")
+        if saga.pagamento_id:
+            esperados.append("ESTORNO")
+        saga.efeitos_esperados_json = esperados
+        saga.efeitos_confirmados_json = []
+
+        self._enfileirar_comando(
+            saga=saga,
+            destino="execucao",
+            event_type=CMD_LIBERAR_RESERVA,
+            causation_id=envelope.event_id,
+            payload={
+                "rodada": saga.rodada,
+                "compensacao_id": comp_id,
+                "motivo": motivo,
+                "reserva_id": saga.id,
+                "execucao_cancelada_event_id": str(envelope.event_id),
+            },
+            traceparent=traceparent,
+        )
+        if saga.orcamento_id:
+            self._enfileirar_comando(
+                saga=saga,
+                destino="billing",
+                event_type="CancelarOrcamento.v1",
+                causation_id=envelope.event_id,
+                payload={
+                    "rodada": saga.rodada,
+                    "compensacao_id": comp_id,
+                    "motivo": motivo,
+                    "orcamento_id": saga.orcamento_id,
+                    "orcamento_versao": int(saga.orcamento_versao or 1),
+                    "execucao_cancelada_event_id": str(envelope.event_id),
+                },
+                traceparent=traceparent,
+            )
+        if saga.pagamento_id:
+            saga.compensacao_financeira_status = "PENDENTE"
+            self._enfileirar_comando(
+                saga=saga,
+                destino="billing",
+                event_type=CMD_ESTORNAR_PAGAMENTO,
+                causation_id=envelope.event_id,
+                payload={
+                    "rodada": saga.rodada,
+                    "compensacao_id": comp_id,
+                    "motivo": motivo,
+                    "pagamento_id": saga.pagamento_id,
+                    "total_centavos": int(saga.total_centavos or 1),
+                    "moeda": "BRL",
+                    "execucao_cancelada_event_id": str(envelope.event_id),
+                },
+                traceparent=traceparent,
+            )
+
+    def _aplicar_compensacao(
+        self,
+        saga: SagaInstanceModel,
+        os_model: OrdemDeServicoModel,
+        envelope: Any,
+        *,
+        traceparent: str | None = None,
+    ) -> bool:
+        evt = envelope.event_type
+        estado = EstadoSaga(saga.estado)
+
         if evt in {
-            "ReservaRecusada.v1",
+            EVT_RESERVA_RECUSADA,
             "PagamentoRecusado.v1",
-            "ExecucaoRejeitada.v1",
+            EVT_EXECUCAO_REJEITADA,
         }:
             motivo_map = {
-                "ReservaRecusada.v1": MotivoCompensacao.ESTOQUE_INSUFICIENTE.value,
+                EVT_RESERVA_RECUSADA: MotivoCompensacao.ESTOQUE_INSUFICIENTE.value,
                 "PagamentoRecusado.v1": MotivoCompensacao.PAGAMENTO_RECUSADO.value,
-                "ExecucaoRejeitada.v1": MotivoCompensacao.FALHA_ENFILEIRAMENTO.value,
+                EVT_EXECUCAO_REJEITADA: MotivoCompensacao.FALHA_ENFILEIRAMENTO.value,
             }
             comp_id = uuid4()
             saga.compensacao_id = str(comp_id)
@@ -381,7 +491,7 @@ class OrquestradorSaga:
             self._enfileirar_comando(
                 saga=saga,
                 destino="execucao",
-                event_type="CancelarExecucao.v1",
+                event_type=CMD_CANCELAR_EXECUCAO,
                 causation_id=envelope.event_id,
                 payload={
                     "rodada": saga.rodada,
@@ -397,71 +507,7 @@ class OrquestradorSaga:
             evt == "ExecucaoCancelada.v1"
             and estado == EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO
         ):
-            saga.execucao_cancelada_event_id = str(envelope.event_id)
-            saga.subestado_compensacao = (
-                SubestadoCompensacao.EXECUTANDO_COMPENSACOES.value
-            )
-            self._transicionar_saga(saga, EstadoSaga.COMPENSANDO_EFEITOS)
-            comp_id = saga.compensacao_id or str(uuid4())
-            motivo = (
-                saga.motivo_compensacao or MotivoCompensacao.FALHA_ENFILEIRAMENTO.value
-            )
-            esperados = ["RESERVA"]
-            if saga.orcamento_id:
-                esperados.append("ORCAMENTO")
-            if saga.pagamento_id:
-                esperados.append("ESTORNO")
-            saga.efeitos_esperados_json = esperados
-            saga.efeitos_confirmados_json = []
-
-            self._enfileirar_comando(
-                saga=saga,
-                destino="execucao",
-                event_type="LiberarReserva.v1",
-                causation_id=envelope.event_id,
-                payload={
-                    "rodada": saga.rodada,
-                    "compensacao_id": comp_id,
-                    "motivo": motivo,
-                    "reserva_id": saga.id,
-                    "execucao_cancelada_event_id": str(envelope.event_id),
-                },
-                traceparent=traceparent,
-            )
-            if saga.orcamento_id:
-                self._enfileirar_comando(
-                    saga=saga,
-                    destino="billing",
-                    event_type="CancelarOrcamento.v1",
-                    causation_id=envelope.event_id,
-                    payload={
-                        "rodada": saga.rodada,
-                        "compensacao_id": comp_id,
-                        "motivo": motivo,
-                        "orcamento_id": saga.orcamento_id,
-                        "orcamento_versao": int(saga.orcamento_versao or 1),
-                        "execucao_cancelada_event_id": str(envelope.event_id),
-                    },
-                    traceparent=traceparent,
-                )
-            if saga.pagamento_id:
-                saga.compensacao_financeira_status = "PENDENTE"
-                self._enfileirar_comando(
-                    saga=saga,
-                    destino="billing",
-                    event_type="EstornarPagamento.v1",
-                    causation_id=envelope.event_id,
-                    payload={
-                        "rodada": saga.rodada,
-                        "compensacao_id": comp_id,
-                        "motivo": motivo,
-                        "pagamento_id": saga.pagamento_id,
-                        "total_centavos": int(saga.total_centavos or 1),
-                        "moeda": "BRL",
-                        "execucao_cancelada_event_id": str(envelope.event_id),
-                    },
-                    traceparent=traceparent,
-                )
+            self._aplicar_execucao_cancelada(saga, envelope, traceparent=traceparent)
             return True
 
         if (
@@ -477,13 +523,13 @@ class OrquestradorSaga:
 
         if (
             evt
-            in {"ReservaLiberada.v1", "OrcamentoCancelado.v1", "PagamentoEstornado.v1"}
+            in {EVT_RESERVA_LIBERADA, EVT_ORCAMENTO_CANCELADO, EVT_PAGAMENTO_ESTORNADO}
             and estado == EstadoSaga.COMPENSANDO_EFEITOS
         ):
             efeito_map = {
-                "ReservaLiberada.v1": "RESERVA",
-                "OrcamentoCancelado.v1": "ORCAMENTO",
-                "PagamentoEstornado.v1": "ESTORNO",
+                EVT_RESERVA_LIBERADA: "RESERVA",
+                EVT_ORCAMENTO_CANCELADO: "ORCAMENTO",
+                EVT_PAGAMENTO_ESTORNADO: "ESTORNO",
             }
             efeito = efeito_map[evt]
             confirmados = list(saga.efeitos_confirmados_json or [])
@@ -492,7 +538,6 @@ class OrquestradorSaga:
             saga.efeitos_confirmados_json = confirmados
             if efeito == "ESTORNO":
                 saga.compensacao_financeira_status = "CONCLUIDA"
-
             esperados = list(saga.efeitos_esperados_json or [])
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
@@ -502,45 +547,41 @@ class OrquestradorSaga:
                 self._transicionar_saga(saga, EstadoSaga.COMPENSADA)
             return True
 
-        if evt == "PagamentoEstornoFalhou.v1" and estado in {
+        return self._aplicar_estorno_tardio(
+            saga, os_model, envelope, traceparent=traceparent
+        )
+
+    def _aplicar_estorno_tardio(
+        self,
+        saga: SagaInstanceModel,
+        os_model: OrdemDeServicoModel,
+        envelope: Any,
+        *,
+        traceparent: str | None = None,
+    ) -> bool:
+        evt = envelope.event_type
+        payload = envelope.payload
+        estado = EstadoSaga(saga.estado)
+        estados_pos_barreira = {
             EstadoSaga.COMPENSANDO_EFEITOS,
             EstadoSaga.COMPENSADA,
             EstadoSaga.RECUSADA,
             EstadoSaga.INTERVENCAO_MANUAL,
-        }:
-            saga.compensacao_financeira_status = "FALHA_PENDENTE"
+        }
+        status_financeiro_map = {
+            "PagamentoEstornoFalhou.v1": "FALHA_PENDENTE",
+            "PagamentoEstornoPendente.v1": "PENDENTE",
+            EVT_PAGAMENTO_ESTORNADO: "CONCLUIDA",
+        }
+        if evt in status_financeiro_map and estado in estados_pos_barreira:
+            saga.compensacao_financeira_status = status_financeiro_map[evt]
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
             return True
 
-        if evt == "PagamentoEstornoPendente.v1" and estado in {
-            EstadoSaga.COMPENSANDO_EFEITOS,
-            EstadoSaga.COMPENSADA,
-            EstadoSaga.RECUSADA,
-            EstadoSaga.INTERVENCAO_MANUAL,
-        }:
-            saga.compensacao_financeira_status = "PENDENTE"
-            saga.version += 1
-            saga.atualizada_em = datetime.now(timezone.utc)
-            return True
-
-        if evt == "PagamentoEstornado.v1" and estado in {
-            EstadoSaga.COMPENSADA,
-            EstadoSaga.RECUSADA,
-            EstadoSaga.INTERVENCAO_MANUAL,
-        }:
-            saga.compensacao_financeira_status = "CONCLUIDA"
-            saga.version += 1
-            saga.atualizada_em = datetime.now(timezone.utc)
-            return True
-
-        if evt == "PagamentoConfirmado.v1" and estado in {
-            EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO,
-            EstadoSaga.COMPENSANDO_EFEITOS,
-            EstadoSaga.COMPENSADA,
-            EstadoSaga.RECUSADA,
-            EstadoSaga.INTERVENCAO_MANUAL,
-        }:
+        if evt == "PagamentoConfirmado.v1" and estado in (
+            estados_pos_barreira | {EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO}
+        ):
             saga.pagamento_id = str(payload["pagamento_id"])
             saga.total_centavos = int(
                 payload.get("total_centavos") or saga.total_centavos or 1
@@ -555,7 +596,7 @@ class OrquestradorSaga:
                 self._enfileirar_comando(
                     saga=saga,
                     destino="billing",
-                    event_type="EstornarPagamento.v1",
+                    event_type=CMD_ESTORNAR_PAGAMENTO,
                     causation_id=envelope.event_id,
                     payload={
                         "rodada": saga.rodada,
@@ -580,7 +621,7 @@ class OrquestradorSaga:
                 self._enfileirar_comando(
                     saga=saga,
                     destino="execucao",
-                    event_type="CancelarExecucao.v1",
+                    event_type=CMD_CANCELAR_EXECUCAO,
                     causation_id=envelope.event_id,
                     payload={
                         "rodada": saga.rodada,
@@ -593,6 +634,22 @@ class OrquestradorSaga:
             return True
 
         return False
+
+    def _aplicar_evento(
+        self,
+        saga: SagaInstanceModel,
+        os_model: OrdemDeServicoModel,
+        envelope: Any,
+        *,
+        traceparent: str | None = None,
+    ) -> bool:
+        if self._aplicar_fluxo_principal(
+            saga, os_model, envelope, traceparent=traceparent
+        ):
+            return True
+        return self._aplicar_compensacao(
+            saga, os_model, envelope, traceparent=traceparent
+        )
 
     def _reavaliar_eventos_adiantados(
         self, saga: SagaInstanceModel, os_model: OrdemDeServicoModel
@@ -754,7 +811,7 @@ class OrquestradorSaga:
             .first()
         )
         if saga is None:
-            raise ValueError("Saga não encontrada para a OS")
+            raise ValueError(MSG_SAGA_NAO_ENCONTRADA)
         os_model = (
             self.db.query(OrdemDeServicoModel)
             .filter(OrdemDeServicoModel.id == os_id)
@@ -800,7 +857,7 @@ class OrquestradorSaga:
             .first()
         )
         if saga is None:
-            raise ValueError("Saga não encontrada para a OS")
+            raise ValueError(MSG_SAGA_NAO_ENCONTRADA)
         if (
             saga.compensacao_financeira_status != "FALHA_PENDENTE"
             or not saga.execucao_cancelada_event_id
@@ -928,7 +985,7 @@ class OrquestradorSaga:
             .first()
         )
         if anterior is None:
-            raise ValueError("Saga não encontrada para a OS")
+            raise ValueError(MSG_SAGA_NAO_ENCONTRADA)
         if anterior.estado != EstadoSaga.RECUSADA.value:
             raise ValueError("Nova rodada só é permitida após recusa de orçamento")
         os_model = (
