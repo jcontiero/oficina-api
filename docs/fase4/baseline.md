@@ -1,6 +1,7 @@
 # Fase 4 · Relatório de Baseline, Governança e Propriedade de States (Etapa P0)
 
-Data da auditoria e execução da P0: **16 de novembro de 2026**
+Data da auditoria e execução da P0: **16 de novembro de 2026**  
+**Status da Etapa P0:** **PARCIALMENTE CONCLUÍDA** *(trabalho local, inventário de states, governança GitHub e PRs concluídos; pendentes: correção de permissão/token do SonarCloud, merge dos 4 PRs, acesso ao projeto GCP e validação operacional em runtime do Datadog e do isolamento entre ambientes).*
 
 ---
 
@@ -37,29 +38,29 @@ Todos os states remotos residem no bucket GCS `gs://pos-fiap-2026-tf-state` (cri
 
 ---
 
-## 3. Verificação Real de Capacidade do GKE e Requests dos Workloads
+## 3. Dimensionamento do GKE (Estimativa Estática Ainda Não Validada em Runtime)
 
-Conforme diretriz da P0, **não foi realizado aumento especulativo da infraestrutura GKE**:
+> **Importante:** Como o cluster GKE (`oficina-gke-cluster`) não pôde ser inspecionado em execução nesta sessão (`kubectl get nodes` / `kubectl describe nodes` indisponíveis localmente), os números abaixo constituem uma **estimativa estática baseada nos manifestos e no state histórico**, **ainda não validada no cluster real**. Em consonância com a diretriz da P0, **não foi realizado aumento especulativo da infraestrutura GKE** baseando-se apenas em estimativa.
 
-1. **Inspeção do estado real provisionado (Run `35036689334` de `oficina-k8s-infra` e `infra/modules/gke/main.tf`):**
-   - Cluster: `projects/pos-fiap-2026/locations/us-east1/clusters/oficina-gke-cluster` (GKE Standard zonal/regional em `us-east1`).
-   - Node Pool: `oficina-gke-cluster-node-pool` com `node_count = 1`, `machine_type = "e2-medium"` (2 vCPUs / 2000m CPU total, 4 GiB RAM total; capacidade alocável típica no GKE Standard após reserva do kubelet/SO: **~940m CPU** e **~2.85 GiB RAM**).
-   - *Nota sobre conectividade direta local:* A tentativa de consulta direta ao endpoint `https://34.148.79.42` via `kubectl get nodes` a partir da máquina local atingiu timeout e a conta local `jonascv@gmail.com` retornou `403 Permission denied` no projeto `pos-fiap-2026` (cujo acesso de automação ocorre via Service Account `github-actions-sa@pos-fiap-2026.iam.gserviceaccount.com` no Workload Identity Federation). Os endpoints públicos da Fase 3 (`oficina-gateway-dkvx20rp.ue.gateway.dev` e `oficina-auth-function-7ne5uvh6rq-ue.a.run.app`) retornam atualmente HTTP 404.
+1. **Configuração declarada no Terraform e último apply registrado (Run `35036689334` de `oficina-k8s-infra` e `infra/modules/gke/main.tf`):**
+   - Cluster: `projects/pos-fiap-2026/locations/us-east1/clusters/oficina-gke-cluster` (GKE Standard em `us-east1`).
+   - Node Pool: `oficina-gke-cluster-node-pool` declarado com `node_count = 1`, `machine_type = "e2-medium"` (2 vCPUs / 2000m CPU nominal, 4 GiB RAM nominal; capacidade alocável teórica em GKE Standard após reservas de sistema: ~`940m` CPU e ~`2.85 GiB` RAM — *valor teórico pendente de confirmação via `kubectl describe nodes`*).
+   - *Limitação de verificação local:* A tentativa de conexão ao endpoint registrado no kubeconfig (`https://34.148.79.42`) atingiu timeout e a conta local `jonascv@gmail.com` recebeu `403 Permission denied` na API do projeto `pos-fiap-2026`.
 
-2. **Levantamento exato dos `requests` e `limits` dos workloads (`oficina-api/k8s/`):**
+2. **Levantamento estático dos `requests` e `limits` nos manifestos locais (`oficina-api/k8s/`):**
 
 | Workload | Réplicas (por env) | CPU Request (soma) | Memory Request (soma) | CPU Limit (soma) | Memory Limit (soma) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `Deployment/oficina-api` | 2 (`minReplicas: 2` no HPA) | `200m` (`2 × 100m`) | `256Mi` (`2 × 128Mi`) | `1000m` (`2 × 500m`) | `1024Mi` (`2 × 512Mi`) |
 | `Deployment/oficina-api-worker` | 1 | `50m` (`1 × 50m`) | `64Mi` (`1 × 64Mi`) | `200m` (`1 × 200m`) | `128Mi` (`1 × 128Mi`) |
-| **Subtotal por ambiente (`homolog` ou `production`)** | **3 pods fixos** | **`250m` CPU** | **`320Mi` RAM** | **`1200m` CPU** | **`1152Mi` RAM** |
-| **Total com 2 ambientes (`homolog` + `production`)** | **6 pods fixos** | **`500m` CPU** | **`640Mi` RAM** | **`2400m` CPU** | **`2304Mi` RAM** |
+| **Subtotal declarado por ambiente (`homolog` ou `production`)** | **3 pods fixos** | **`250m` CPU** | **`320Mi` RAM** | **`1200m` CPU** | **`1152Mi` RAM** |
+| **Total declarado para 2 ambientes (`homolog` + `production`)** | **6 pods fixos** | **`500m` CPU** | **`640Mi` RAM** | **`2400m` CPU** | **`2304Mi` RAM** |
 | `Job/oficina-api-migrate` *(transitório no deploy, `ttlSecondsAfterFinished: 300`)* | 1 durante migration | `100m` CPU | `128Mi` RAM | `300m` CPU | `256Mi` RAM |
-| `DaemonSet/datadog` *(1 pod por nó)* | 1 no cluster | ~`150m–200m` CPU | ~`256Mi–384Mi` RAM | ~`500m` CPU | ~`512Mi` RAM |
+| `DaemonSet/datadog` *(sem requests explícitos em `modules/datadog/main.tf`)* | 1 por nó | *Não medido em runtime* (estimado ~`150m–200m`) | *Não medido em runtime* (estimado ~`256Mi–512Mi`) | *Sem limite explícito no módulo* | *Sem limite explícito no módulo* |
 
-3. **Conclusão de dimensionamento na P0:**
-   - Para a Etapa P0 (1 serviço `oficina-api` em `homolog` + `production` + Datadog Agent), a soma de `requests` permanentes é **~`700m` CPU** e **~`1.0 GiB` RAM**, cabendo integralmente em **1 nó `e2-medium`** (~`940m` CPU e ~`2.85 GiB` RAM alocáveis).
-   - Portanto, `node_count = 1` e `machine_type = "e2-medium"` foram mantidos intactos. Qualquer ajuste futuro na Etapa P7 (quando entrarem `oficina-billing` e `oficina-execucao`) será precedido por medição real com `kubectl describe nodes` no cluster ativo.
+3. **Decisão na P0 e critério para a P7:**
+   - `node_count = 1` e `machine_type = "e2-medium"` foram mantidos inalterados para não aumentar infraestrutura por estimativa.
+   - A validação real de capacidade (`kubectl get nodes`, `kubectl describe nodes`, `kubectl top nodes` e consumo efetivo do DaemonSet do Datadog + pods de sistema do `kube-system`) permanece registrada como **pendência obrigatória antes do dimensionamento/deploy da Etapa P7**.
 
 ---
 
@@ -104,15 +105,20 @@ Conforme diretriz da P0, **não foi realizado aumento especulativo da infraestru
 
 ---
 
-## 6. Pendências Registradas para Continuidade / Aceite Remoto
+## 6. Pendências da Etapa P0 (Status: Parcialmente Concluída)
 
-1. **Bloqueio preventivo contra criação automática de recursos na nuvem:**
-   - Todos os 4 workflows `.github/workflows/deploy.yml` foram configurados para exigir disparo manual (`workflow_dispatch`) com confirmação explícita (`confirm_cloud_apply == 'true'` ou `confirm_deploy == 'true'`). Nenhum recurso na GCP (GKE, Cloud SQL, Cloud Functions, API Gateway ou Artifact Registry) será criado ou modificado sem permissão explícita do usuário.
-2. **Renovação do `SONAR_TOKEN` nos GitHub Secrets (HTTP 403 no SonarCloud):**
-   - Na execução dos checks dos 4 PRs da P0, os jobs de validação (`validate` / `lint-test` com cobertura $\ge 80\%$ e `terraform validate`) passaram com 100% de sucesso, mas o job `Build/SonarQube` retornou `HTTP 403 Forbidden` em `GET https://api.sonarcloud.io/analysis/jres?os=linux&arch=x86_64`, indicando expiração do `SONAR_TOKEN` cadastrado nos repositórios GitHub em setembro/2026. É necessário gerar um novo token no SonarCloud e atualizar o secret `SONAR_TOKEN` nos 4 repositórios para que o check `SonarQube` aprove o merge dos PRs.
-3. **Segredo `DB_URL` específico no GitHub Environment `homolog` de `oficina-api`:**
-   - Atualmente `DB_URL` existe como segredo em nível de repositório (`oficina-api`). Antes de autorizar um deploy real na branch `homolog`, deve-se cadastrar o segredo `DB_URL` dentro do GitHub Environment `homolog` com a URL do banco `oficina_homolog` (valor presente no Secret Manager `database-url-homolog`). Caso não seja cadastrado e o segredo global aponte para `oficina_prod`, a nova trava `Verify Homolog / Production Database Isolation Before Migration` bloqueará a execução da migration com segurança.
-4. **Segredo `DATADOG_API_KEY` em `oficina-k8s-infra`:**
-   - Cadastrar o segredo `DATADOG_API_KEY` no repositório/environment de `oficina-k8s-infra` antes de autorizar `terraform apply` na `main` para que o Helm release do Datadog Agent receba a chave real.
-5. **Verificação do projeto GCP `pos-fiap-2026` / Cluster GKE ativo:**
-   - Validar o estado da conta/projeto GCP (`pos-fiap-2026`) quando o usuário autorizar a criação/atualização de recursos em nuvem.
+A Etapa P0 permanece classificada como **parcialmente concluída** até que as cinco pendências abaixo sejam resolvidas (nenhuma delas bloqueia a execução local das etapas P1 a P6):
+
+1. **Falha de autorização no SonarCloud (`HTTP 403 Forbidden`) e merge dos 4 PRs da P0:**
+   - Na execução dos checks dos 4 PRs da P0 ([`oficina-api#12`](https://github.com/jcontiero/oficina-api/pull/12), [`oficina-k8s-infra#6`](https://github.com/jcontiero/oficina-k8s-infra/pull/6), [`oficina-database-infra#5`](https://github.com/jcontiero/oficina-database-infra/pull/5) e [`oficina-serverless#5`](https://github.com/jcontiero/oficina-serverless/pull/5)), os jobs de validação de código, cobertura ($\ge 80\%$) e Terraform passaram com sucesso, mas o job `Build/SonarQube` falhou com `GET https://api.sonarcloud.io/analysis/jres?os=linux&arch=x86_64 failed with HTTP 403 Forbidden. Please check the property sonar.token or the environment variable SONAR_TOKEN`.
+   - **Classificação correta do erro:** `HTTP 403 Forbidden` indica **falta de permissão / falha de autorização do token `SONAR_TOKEN`** (token inválido, revogado ou sem permissão `Execute Analysis` na organização/projeto do SonarCloud — não é possível afirmar apenas pelo código HTTP que a causa tenha sido expiração por prazo).
+   - **Ação pendente:** Atualizar `SONAR_TOKEN` nos 4 repositórios com um token válido com permissão de análise no SonarCloud, reexecutar o check `SonarQube`, realizar o **merge dos 4 PRs na `main`** e criar a branch `homolog` a partir da `main` atualizada.
+2. **Acesso ao projeto GCP (`pos-fiap-2026`) e verificação de capacidade real do GKE:**
+   - Restabelecer acesso autenticado ao projeto GCP e executar `kubectl get nodes -o wide`, `kubectl describe nodes` e `kubectl top nodes` para substituir a estimativa estática da Seção 3 por medição real antes de redimensionar ou implantar os três serviços na P7.
+3. **Validação operacional do Datadog Agent e do isolamento `homolog`/`production`:**
+   - Embora o módulo Terraform do Datadog e as travas de isolamento (`GitHub Environments` + validação de `DB_URL` antes de migrations + `env_suffix` serverless) estejam codificados nos PRs, sua comprovação operacional depende da aplicação em nuvem (DaemonSet `datadog` saudável reportando traces/logs e smoke test de isolamento entre `homolog` e `production`).
+4. **Configuração dos Secrets por GitHub Environment:**
+   - Cadastrar `DB_URL` no GitHub Environment `homolog` (`oficina_homolog` / `oficina_os_homolog`) e no GitHub Environment `production` (`oficina_prod` / `oficina_os_production`), além de `DATADOG_API_KEY` em `oficina-k8s-infra`.
+5. **Remoção do bloqueio temporário de deploy manual antes do aceite final de CI/CD (P7):**
+   - Atendendo à solicitação de segurança para não criar recursos na nuvem sem permissão explícita, os workflows `.github/workflows/deploy.yml` dos 4 repositórios estão temporariamente travados em `workflow_dispatch` com input `confirm_cloud_apply == 'true'` / `confirm_deploy == 'true'`.
+   - **Ação obrigatória na P7 (antes do aceite final de CI/CD e gravação do vídeo):** Remover esse bloqueio temporário para restaurar o **deploy automatizado em Kubernetes a cada push/merge em `homolog` e `main`**, conforme exigido pelo enunciado da Fase 4 (páginas 4–5).
