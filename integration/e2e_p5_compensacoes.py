@@ -192,7 +192,8 @@ def main() -> int:
             f"{BILLING_URL}/v1/pagamentos/por-os/{os_id}", headers=headers
         ).json()
         sim_rec = client.post(
-            f"{BILLING_URL}/internal/fake-mp/{pag['provider_order_id']}/recusar"
+            f"{BILLING_URL}/internal/fake-mp/{pag['provider_order_id']}/recusar",
+            headers=headers,
         ).json()
         r_wh = client.post(
             f"{BILLING_URL}/webhooks/mercadopago",

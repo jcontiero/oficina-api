@@ -1,3 +1,4 @@
+from src.shared.correlacao import consumir_contexto
 from datetime import datetime, timedelta, timezone
 import json
 import logging
@@ -181,12 +182,13 @@ def consumir_mensagens_pull(
                 }
             )
             try:
-                with session_factory() as db:
-                    OrquestradorSaga(
-                        db, environment=environment
-                    ).processar_evento_envelope(
-                        dados, consumer="os-orquestrador", traceparent=traceparent
-                    )
+                with consumir_contexto(dados, traceparent) as traceparent:
+                    with session_factory() as db:
+                        OrquestradorSaga(
+                            db, environment=environment
+                        ).processar_evento_envelope(
+                            dados, consumer="os-orquestrador", traceparent=traceparent
+                        )
             finally:
                 correlacao_ctx.reset(token)
             subscriber.acknowledge(

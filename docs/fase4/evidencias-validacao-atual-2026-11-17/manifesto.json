@@ -1,0 +1,38 @@
+[
+  {
+    "repo": "oficina-api",
+    "main_sha": "49af2ff69d7e25953cf68dc2e1482957bc7f5106",
+    "local_sha": "d0baf5a0cc65fe60eeb04aa20db8aed737ef9d9c",
+    "iguais": false
+  },
+  {
+    "repo": "oficina-billing",
+    "main_sha": "f9fa846547b5203be18e832dbc88944b797eca5b",
+    "local_sha": "0dc029d0680917bd85cf433a616bfecc2bf2e0aa",
+    "iguais": false
+  },
+  {
+    "repo": "oficina-execucao",
+    "main_sha": "37338cd03ee7fb07de079ab5b14eeff7142d71fe",
+    "local_sha": "3ead4902f530b8b89bd37ad0704f92aab8f8182e",
+    "iguais": false
+  },
+  {
+    "repo": "oficina-serverless",
+    "main_sha": "16515d838143edb456a05d227684eb6d7185c352",
+    "local_sha": "10d9e55a857a831115a875574dd35ffe7c2ee5dd",
+    "iguais": false
+  },
+  {
+    "repo": "oficina-k8s-infra",
+    "main_sha": "1faed08a1bd529bd0e6fb94b34d2cc3291e9a897",
+    "local_sha": "1faed08a1bd529bd0e6fb94b34d2cc3291e9a897",
+    "iguais": true
+  },
+  {
+    "repo": "oficina-database-infra",
+    "main_sha": "f391dfee3de6e91fc22ae8550b740762478d9502",
+    "local_sha": "f391dfee3de6e91fc22ae8550b740762478d9502",
+    "iguais": true
+  }
+]

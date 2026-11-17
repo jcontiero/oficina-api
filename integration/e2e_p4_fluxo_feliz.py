@@ -220,7 +220,7 @@ def main() -> int:
         ).json()
         provider_order_id = pag_info["provider_order_id"]
         sim = client.post(
-            f"{BILLING_URL}/internal/fake-mp/{provider_order_id}/pagar"
+            f"{BILLING_URL}/internal/fake-mp/{provider_order_id}/pagar", headers=headers
         ).json()
         r_wh = client.post(
             f"{BILLING_URL}/webhooks/mercadopago",

@@ -1,0 +1,57 @@
+[
+  {
+    "namespace": "oficina-homolog",
+    "name": "kube-root-ca.crt",
+    "data": {}
+  },
+  {
+    "namespace": "oficina-homolog",
+    "name": "oficina-api-config",
+    "data": {
+      "DD_TRACE_ENABLED": "true",
+      "DD_VERSION": "bb9efceb3d9dcf1c2132ef989df3f244884aae73",
+      "ENABLE_LEGACY_MONOLITH_DOMAINS": "true",
+      "ENVIRONMENT": "homolog",
+      "GCP_PROJECT_ID": "fiap-project-514922",
+      "INTERNAL_AUTH_ALLOWED_SERVICE_ACCOUNTS": "oficina-fn-homolog-sa@fiap-project-514922.iam.gserviceaccount.com",
+      "INTERNAL_AUTH_AUDIENCE": "https://api.oficina.internal/internal/clientes/autenticacao",
+      "JWKS_URL": "https://oficina-gateway-homolog-bybliidf.ue.gateway.dev/.well-known/jwks.json",
+      "JWT_ADMIN_ISSUER": "oficina-admin-homolog",
+      "JWT_AUDIENCE": "oficina-backend-homolog",
+      "JWT_CLIENT_ISSUER": "oficina-auth-homolog"
+    }
+  },
+  {
+    "namespace": "oficina-homolog",
+    "name": "oficina-billing-config",
+    "data": {
+      "ADMIN_JWKS_URL": "http://oficina-api-service/.well-known/admin-jwks.json",
+      "DD_TRACE_ENABLED": "true",
+      "DD_VERSION": "e4228409a20efd19f65e6e18eeea9d1cd37151d9",
+      "ENVIRONMENT": "homolog",
+      "GCP_PROJECT_ID": "fiap-project-514922",
+      "JWKS_URL": "https://oficina-gateway-homolog-bybliidf.ue.gateway.dev/.well-known/jwks.json",
+      "JWT_ADMIN_ISSUER": "oficina-admin-homolog",
+      "JWT_AUDIENCE": "oficina-backend-homolog",
+      "JWT_CLIENT_ISSUER": "oficina-auth-homolog",
+      "MP_PROVIDER_MODE": "fake"
+    }
+  },
+  {
+    "namespace": "oficina-homolog",
+    "name": "oficina-execucao-config",
+    "data": {
+      "ADMIN_JWKS_URL": "http://oficina-api-service/.well-known/admin-jwks.json",
+      "CLIENT_JWKS_URL": "https://oficina-gateway-homolog-bybliidf.ue.gateway.dev/.well-known/jwks.json",
+      "DD_TRACE_ENABLED": "true",
+      "DD_VERSION": "4bd030eb8c6fc1bcb4fd3ce7fba5b897fca5bc58",
+      "ENVIRONMENT": "homolog",
+      "FIRESTORE_DATABASE": "oficina-execucao-homolog",
+      "GCP_PROJECT_ID": "fiap-project-514922",
+      "JWT_ADMIN_ISSUER": "oficina-admin-homolog",
+      "JWT_AUDIENCE": "oficina-backend-homolog",
+      "JWT_CLIENT_ISSUER": "oficina-auth-homolog",
+      "USE_IN_MEMORY_STORE": "false"
+    }
+  }
+]

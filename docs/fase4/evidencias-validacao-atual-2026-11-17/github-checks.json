@@ -1,0 +1,175 @@
+[
+  {
+    "repo": "oficina-api",
+    "prs": [],
+    "main_checks": [
+      {
+        "name": "SonarCloud Code Analysis",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-api&branch=main"
+      },
+      {
+        "name": "build-push-deploy",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/jcontiero/oficina-api/actions/runs/44176329585/job/134369195985"
+      },
+      {
+        "name": "validate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-api/actions/runs/44176329585/job/134368532304"
+      },
+      {
+        "name": "bdd-integrado",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-api/actions/runs/44176329585/job/134368531789"
+      },
+      {
+        "name": "SonarQube",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-api/actions/runs/44176329371/job/134368527748"
+      }
+    ]
+  },
+  {
+    "repo": "oficina-billing",
+    "prs": [
+      {
+        "headRefOid": "0dc029d0680917bd85cf433a616bfecc2bf2e0aa",
+        "number": 12,
+        "statusCheckRollup": [
+          {
+            "__typename": "CheckRun",
+            "completedAt": "2026-11-17T21:30:46Z",
+            "conclusion": "SUCCESS",
+            "detailsUrl": "https://github.com/jcontiero/oficina-billing/actions/runs/44180359864/job/134382746489",
+            "name": "validate",
+            "startedAt": "2026-11-17T21:29:38Z",
+            "status": "COMPLETED",
+            "workflowName": "CI"
+          },
+          {
+            "__typename": "CheckRun",
+            "completedAt": "2026-11-17T21:30:40Z",
+            "conclusion": "SUCCESS",
+            "detailsUrl": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-billing&pullRequest=12",
+            "name": "SonarCloud Code Analysis",
+            "startedAt": "2026-11-17T21:30:10Z",
+            "status": "COMPLETED",
+            "workflowName": ""
+          }
+        ],
+        "title": "fix(billing): support nome and fallback keys in GerarOrcamento payload",
+        "url": "https://github.com/jcontiero/oficina-billing/pull/12"
+      }
+    ],
+    "main_checks": [
+      {
+        "name": "SonarCloud Code Analysis",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-billing&branch=main"
+      },
+      {
+        "name": "validate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-billing/actions/runs/44176119903/job/134367785522"
+      }
+    ]
+  },
+  {
+    "repo": "oficina-execucao",
+    "prs": [],
+    "main_checks": [
+      {
+        "name": "SonarCloud Code Analysis",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-execucao&branch=main"
+      },
+      {
+        "name": "validate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-execucao/actions/runs/44179358043/job/134379197485"
+      }
+    ]
+  },
+  {
+    "repo": "oficina-serverless",
+    "prs": [],
+    "main_checks": [
+      {
+        "name": "SonarCloud Code Analysis",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-serverless&branch=main"
+      },
+      {
+        "name": "SonarQube",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-serverless/actions/runs/44175227584/job/134364682670"
+      },
+      {
+        "name": "lint-test",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-serverless/actions/runs/44175227575/job/134364682101"
+      }
+    ]
+  },
+  {
+    "repo": "oficina-k8s-infra",
+    "prs": [],
+    "main_checks": [
+      {
+        "name": "SonarCloud Code Analysis",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-k8s-infra&branch=main"
+      },
+      {
+        "name": "validate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-k8s-infra/actions/runs/44161573799/job/134316500050"
+      },
+      {
+        "name": "SonarQube",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-k8s-infra/actions/runs/44161573611/job/134316499584"
+      }
+    ]
+  },
+  {
+    "repo": "oficina-database-infra",
+    "prs": [],
+    "main_checks": [
+      {
+        "name": "SonarCloud Code Analysis",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://sonarcloud.io/dashboard?id=jcontiero_oficina-database-infra&branch=main"
+      },
+      {
+        "name": "SonarQube",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-database-infra/actions/runs/44161583710/job/134316536030"
+      },
+      {
+        "name": "validate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/jcontiero/oficina-database-infra/actions/runs/44161583635/job/134316534730"
+      }
+    ]
+  }
+]
