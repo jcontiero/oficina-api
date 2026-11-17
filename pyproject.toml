@@ -41,3 +41,8 @@ source = ["src"]
 [tool.coverage.report]
 fail_under = 80
 omit = ["src/migrations/*", "alembic/*"]
+
+[dependency-groups]
+dev = [
+    "pytest-bdd>=9.0.1",
+]

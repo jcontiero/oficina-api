@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jcontiero/oficina-billing
-          ref: 46e40e41635cad6b3fd2b3be6f6bba8dba990032
+          ref: 4da05bf45802bd946e4547def144fc91d033eaf2
           path: oficina-billing
       - name: Checkout oficina-execucao (SHA P6)
         uses: actions/checkout@v4
@@ -118,7 +118,7 @@ jobs:
 
   build-push-deploy:
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, bdd-integrado]
     if: github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog')
     environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
     permissions:
