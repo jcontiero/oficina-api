@@ -15,6 +15,7 @@ spec:
         component: migration
     spec:
       serviceAccountName: oficina-api-sa
+      automountServiceAccountToken: false
       restartPolicy: OnFailure
       securityContext:
         runAsNonRoot: true

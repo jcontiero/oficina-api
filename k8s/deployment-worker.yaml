@@ -18,6 +18,7 @@ spec:
         tags.datadoghq.com/service: oficina-api-worker
     spec:
       serviceAccountName: oficina-api-sa
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
