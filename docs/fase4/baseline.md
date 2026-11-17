@@ -1,53 +1,110 @@
-# Fase 4 · Relatório de Baseline, Governança e Propriedade de States (Etapa P0)
+# Fase 4 · Relatório de Baseline, Governança, Secrets e Propriedade de States (Etapa P0)
 
 Data da auditoria e execução da P0: **16 de novembro de 2026**  
-**Status da Etapa P0:** **PARCIALMENTE CONCLUÍDA** *(trabalho local, inventário de states, governança GitHub e PRs concluídos; pendentes: correção de permissão/token do SonarCloud, merge dos 4 PRs, acesso ao projeto GCP e validação operacional em runtime do Datadog e do isolamento entre ambientes).*
+**Status da Etapa P0:** **PARCIALMENTE CONCLUÍDA** *(código, testes $\ge 80\%$, SonarCloud aprovado nos 4 PRs, inventário de states/referências GCP, governança GitHub e atualização de identidades de Workload Identity concluídos; pendentes: merge dos 4 PRs, bootstrap/verificação de state no novo projeto GCP `fiap-project-514922`, secrets de ambiente `DB_URL`/`DATADOG_API_KEY` e validação operacional em runtime do Datadog e do isolamento entre ambientes).*
 
 ---
 
-## 1. Situação das Branches e Alinhamento dos Repositórios
+## 1. Situação das Branches, Pull Requests da P0 e Evidências de Qualidade / SonarCloud
 
-Na inspeção inicial do workspace local (`/Users/jonascv/Library/Mobile Documents/com~apple~CloudDocs/jonas/pos_fiap`), três dos quatro repositórios estavam posicionados em branches secundárias locais cujos Pull Requests já haviam sido integrados em `origin/main`. Todos os quatro checkouts foram hidratados e alinhados em `main` (`git merge --ff-only origin/main`) antes da abertura das branches da Etapa P0:
+Todos os quatro checkouts locais foram hidratados, alinhados à `origin/main` e tiveram seus Pull Requests da Etapa P0 submetidos e validados. Após a configuração do secret `SONAR_TOKEN`, todos os workflows de CI e análises do **SonarCloud** passaram com **100% de sucesso**:
 
-| Repositório | Branch Inicial Local | Commit Inicial Local | Commit Canônico (`origin/main`) | Status do Alinhamento Local | Branch de Correção P0 / Pull Request |
+| Repositório | `origin/main` Base | Branch / Pull Request P0 | Checks de CI / Validação | SonarQube Action Run ID | SonarCloud Quality Gate |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `oficina-api` | `main` | `ec15d62` | `ec15d62` | Alinhado com `origin/main` | `chore/p0-baseline-ci-and-isolation` ([PR #12](https://github.com/jcontiero/oficina-api/pull/12)) |
-| `oficina-k8s-infra` | `fix/terraform-datadog-module` | `7e5b312` | `1ef3602` (PR #5 mergeado) | Alinhado para `main` (`1ef3602`) | `chore/p0-datadog-and-state-ownership` ([PR #6](https://github.com/jcontiero/oficina-k8s-infra/pull/6)) |
-| `oficina-database-infra` | `fix/sonar-vulnerabilities` | `a11235b` | `a33bce9` (PR #4 mergeado) | Alinhado para `main` (`a33bce9`) | `chore/p0-state-ownership-and-readme` ([PR #5](https://github.com/jcontiero/oficina-database-infra/pull/5)) |
-| `oficina-serverless` | `feature/aumentar-cobertura-serverless` | `89562fa` | `1d45fec` (PR #4 mergeado) | Alinhado para `main` (`1d45fec`) | `chore/p0-env-parameterization-and-ci` ([PR #5](https://github.com/jcontiero/oficina-serverless/pull/5)) |
+| `oficina-api` | `ec15d62` | `chore/p0-baseline-ci-and-isolation` ([PR #12](https://github.com/jcontiero/oficina-api/pull/12)) | `CI/CD Pipeline/validate` **Aprovado** (186 testes, **85.53%** cobertura) | Run [`43998290784`](https://github.com/jcontiero/oficina-api/actions/runs/43998290784) (**Aprovado**) | `SonarCloud Code Analysis` **Aprovado** |
+| `oficina-k8s-infra` | `1ef3602` | `chore/p0-datadog-and-state-ownership` ([PR #6](https://github.com/jcontiero/oficina-k8s-infra/pull/6)) | `Terraform CI/validate` **Aprovado** | Run [`43997761614`](https://github.com/jcontiero/oficina-k8s-infra/actions/runs/43997761614) (**Aprovado**) | `SonarCloud Code Analysis` **Aprovado** |
+| `oficina-database-infra` | `a33bce9` | `chore/p0-state-ownership-and-readme` ([PR #5](https://github.com/jcontiero/oficina-database-infra/pull/5)) | `Terraform CI/validate` **Aprovado** | Run [`43997779443`](https://github.com/jcontiero/oficina-database-infra/actions/runs/43997779443) (**Aprovado**) | `SonarCloud Code Analysis` **Aprovado** |
+| `oficina-serverless` | `1d45fec` | `chore/p0-env-parameterization-and-ci` ([PR #5](https://github.com/jcontiero/oficina-serverless/pull/5)) | `CI/lint-test` **Aprovado** (23 testes, **97.20%** cobertura + `terraform validate`) | Run [`43997770613`](https://github.com/jcontiero/oficina-serverless/actions/runs/43997770613) (**Aprovado**) | `SonarCloud Code Analysis` **Aprovado** |
 
-> **Por que a branch `homolog` não foi publicada antes dos PRs da P0:**
-> Nos workflows originais (`deploy.yml`), um push para `homolog` em `oficina-k8s-infra` e `oficina-database-infra` executava `terraform workspace select homolog || terraform workspace new homolog` seguido de `terraform apply`, o que tentaria recriar a VPC, o cluster GKE e a instância Cloud SQL em um segundo state. A branch `homolog` deve ser criada a partir de `main` **somente após** o merge dos PRs da P0 que blindam os states compartilhados e a verificação de banco no deploy.
+> **Nota sobre a falha inicial do SonarCloud (resolvida):** Na primeira execução dos PRs, o scanner havia retornado `HTTP 403 Forbidden` em `GET https://api.sonarcloud.io/analysis/jres` por falha de permissão/autorização do token anterior. Com a atualização do `SONAR_TOKEN` em `2026-11-17T02:03Z–02:04Z`, a reexecução aprovou todos os quatro repositórios.
 
 ---
 
-## 2. Propriedade dos States Terraform (`recurso → state → repositório`)
+## 2. Auditoria de Nomes e Escopo dos Secrets no GitHub (Sem Valores)
 
-Todos os states remotos residem no bucket GCS `gs://pos-fiap-2026-tf-state` (criado pelo módulo `oficina-k8s-infra/bootstrap`). A tabela abaixo formaliza o dono único de cada recurso para impedir conflito de states entre `homolog` e `production`:
+Inspeção realizada via GitHub API (`repos/jcontiero/{repo}/actions/secrets` e `repos/jcontiero/{repo}/environments/{env}/secrets`), registrando exclusivamente os nomes, escopos e datas de atualização:
+
+| Repositório | Escopo | Nome do Secret | Última Atualização (UTC) | Observação de Isolamento |
+| :--- | :--- | :--- | :--- | :--- |
+| `oficina-api` | Repositório | `SONAR_TOKEN` | `2026-11-17T02:03:35Z` | Utilizado pelo workflow `Build` (`SonarQube`). |
+| `oficina-api` | Repositório | `DB_URL` | `2026-09-15T17:42:15Z` | Segredo global legado; deve ser sobrescrito nos Environments `homolog` e `production` antes de liberar deploy. |
+| `oficina-api` | Repositório | `DB_PASSWORD` | `2026-09-15T17:42:07Z` | Segredo global legado. |
+| `oficina-api` | Environment `homolog` | *(nenhum secret específico)* | — | **Pendente:** cadastrar `DB_URL` de homologação antes de liberar deploy. |
+| `oficina-api` | Environment `production` | *(nenhum secret específico)* | — | **Pendente:** cadastrar `DB_URL` de produção antes de liberar deploy. |
+| `oficina-k8s-infra` | Repositório | `SONAR_TOKEN` | `2026-11-17T02:04:01Z` | Utilizado pelo workflow `Build` (`SonarQube`). |
+| `oficina-k8s-infra` | Environments `homolog` / `production` | *(nenhum secret específico)* | — | **Pendente:** cadastrar `DATADOG_API_KEY` antes do `terraform apply` do Agent. |
+| `oficina-database-infra` | Repositório | `SONAR_TOKEN` | `2026-11-17T02:04:55Z` | Utilizado pelo workflow `Build` (`SonarQube`). |
+| `oficina-database-infra` | Environments `homolog` / `production` | *(nenhum secret específico)* | — | Autenticação via OIDC Workload Identity. |
+| `oficina-serverless` | Repositório | `SONAR_TOKEN` | `2026-11-17T02:04:20Z` | Utilizado pelo workflow `Build` (`SonarQube`). |
+| `oficina-serverless` | Environments `homolog` / `production` | *(nenhum secret específico)* | — | Autenticação via OIDC Workload Identity; funções leem `DATABASE_URL` do GCP Secret Manager (`database-url-homolog` / `database-url-prod`). |
+
+---
+
+## 3. Verificação do Novo Projeto GCP (`fiap-project-514922`), Recursos Existentes e Inventário de Referências a `pos-fiap-2026`
+
+### 3.1. Dados Reais do Novo Projeto GCP e Inspeção Read-Only de Recursos
+
+Consultas somente-leitura (`gcloud projects list`, `storage buckets list`, `iam service-accounts list`, `iam workload-identity-pools list`, `services list --enabled`, `container clusters list`, `sql instances list`) executadas com a conta autenticada `jonascv@gmail.com`:
+
+- **Project ID:** `fiap-project-514922`
+- **Project Name:** `fiap-project`
+- **Project Number:** `936717667971` *(substitui o número `1064199753061` do projeto anterior `pos-fiap-2026`)*
+- **Identidade esperada da Service Account de CI/CD:** `github-actions-sa@fiap-project-514922.iam.gserviceaccount.com`
+- **Identidade esperada do Workload Identity Provider:** `projects/936717667971/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider`
+- **Recursos atualmente existentes em `fiap-project-514922` (nenhum recurso foi provisionado):**
+  - **Buckets GCS (`storage buckets list`):** `[]` (nenhum bucket existente no novo projeto).
+  - **Service Accounts (`iam service-accounts list`):** `[]` (nenhuma Service Account customizada criada ainda).
+  - **Workload Identity Pools (`iam workload-identity-pools list`):** `[]` (nenhum pool OIDC criado ainda).
+  - **Clusters GKE / Instâncias Cloud SQL:** APIs `container.googleapis.com` e `sqladmin.googleapis.com` ainda desabilitadas (`SERVICE_DISABLED`); apenas as APIs padrão do projeto (`storage`, `datastore`, `logging`, `monitoring`, `bigquery`, `servicemanagement`, `serviceusage`) estão ativas.
+
+### 3.2. Onde Estão os States Terraform e Regra de Não Substituição Global
+
+1. **States Remotos (`backend.tf`):**
+   - Os arquivos `oficina-k8s-infra/infra/backend.tf`, `oficina-database-infra/terraform/backend.tf` e `oficina-serverless/terraform/backend.tf` configuram `bucket = "pos-fiap-2026-tf-state"`, que residia no projeto anterior `pos-fiap-2026` (atualmente inacessível via CLI local com `403 Permission denied`).
+   - Como **nenhum recurso deve ser provisionado na GCP neste momento** e o bucket de state pode permanecer no projeto anterior ou exigir migração/bootstrap explícito, **os arquivos `backend.tf` NÃO foram alterados**.
+2. **State Local de Bootstrap (`oficina-k8s-infra/bootstrap/terraform.tfstate` e `.backup`):**
+   - Registra os recursos criados em 14/09/2026 no projeto anterior `pos-fiap-2026` (`project_number: 1064199753061`). **Preservado integralmente sem edição manual** como registro histórico de state.
+
+### 3.3. Inventário Completo das Referências a `pos-fiap-2026` / `1064199753061` nos Quatro Repositórios
+
+| Repositório / Arquivo | Tipo de Referência | Decisão Aplicada na P0 |
+| :--- | :--- | :--- |
+| `oficina-api/.github/workflows/deploy.yml` | `PROJECT_ID`, `workload_identity_provider` (`1064199753061`) e `service_account` | **Atualizado** para `fiap-project-514922`, `936717667971` e `github-actions-sa@fiap-project-514922.iam.gserviceaccount.com`. |
+| `oficina-api/k8s/{deployment,deployment-worker,job-migrate}.yaml` | URI da imagem no Artifact Registry (`us-east1-docker.pkg.dev/...`) | **Atualizado** para `us-east1-docker.pkg.dev/fiap-project-514922/oficina-docker/oficina-api:latest`. |
+| `oficina-api/src/worker.py` e `README.md` | Default de `GCP_PROJECT_ID` | **Atualizado** para `fiap-project-514922`. |
+| `oficina-api/docs/diagramas/diagrama-componentes.md` | Rótulo histórico de diagrama da Fase 3 | **Preservado** como documentação histórica da Fase 3. |
+| `oficina-k8s-infra/.github/workflows/deploy.yml` | `workload_identity_provider` (`1064199753061`) e `service_account` | **Atualizado** para `936717667971` e `github-actions-sa@fiap-project-514922.iam.gserviceaccount.com`. |
+| `oficina-k8s-infra/bootstrap/{variables.tf,terraform.tfvars}` | `project_id` alvo do bootstrap | **Atualizado** para `fiap-project-514922` (sem executar `terraform apply`). |
+| `oficina-k8s-infra/infra/variables.tf` e `infra/environments/{homolog,main}.tfvars` | `project_id` alvo dos módulos VPC/GKE/AR | **Atualizado** para `fiap-project-514922`. |
+| `oficina-k8s-infra/infra/backend.tf` | `bucket = "pos-fiap-2026-tf-state"` | **Preservado (não substituído):** aguarda definição/provisionamento do bucket de state. |
+| `oficina-k8s-infra/bootstrap/terraform.tfstate*` | State local do bootstrap antigo (`pos-fiap-2026` / `1064199753061`) | **Preservado (não substituído):** arquivo de estado do Terraform não deve sofrer substituição textual. |
+| `oficina-database-infra/.github/workflows/deploy.yml` | `workload_identity_provider` (`1064199753061`) e `service_account` | **Atualizado** para `936717667971` e `github-actions-sa@fiap-project-514922.iam.gserviceaccount.com`. |
+| `oficina-database-infra/terraform/variables.tf` e `environments/{homolog,main}.tfvars` | `project_id` alvo do Cloud SQL e Secrets | **Atualizado** para `fiap-project-514922`. |
+| `oficina-database-infra/terraform/backend.tf` | `bucket = "pos-fiap-2026-tf-state"` | **Preservado (não substituído):** aguarda definição/provisionamento do bucket de state. |
+| `oficina-serverless/.github/workflows/deploy.yml` | `workload_identity_provider` (`1064199753061`) e `service_account` | **Atualizado** para `936717667971` e `github-actions-sa@fiap-project-514922.iam.gserviceaccount.com`. |
+| `oficina-serverless/terraform/variables.tf` e `environments/{homolog,main}.tfvars` | `project_id` alvo das Functions/PubSub/Gateway | **Atualizado** para `fiap-project-514922`. |
+| `oficina-serverless/terraform/backend.tf` | `bucket = "pos-fiap-2026-tf-state"` | **Preservado (não substituído):** aguarda definição/provisionamento do bucket de state. |
+
+---
+
+## 4. Propriedade dos States Terraform (`recurso → state → repositório`)
 
 | Recurso GCP / K8s | Repositório Dono | Backend GCS (`prefix`) | Workspace Terraform | Regra de Provisionamento (`homolog` vs `main`) |
 | :--- | :--- | :--- | :--- | :--- |
-| APIs GCP, Bucket `pos-fiap-2026-tf-state`, Workload Identity Pool (`github-actions-pool`), SA `github-actions-sa` | `oficina-k8s-infra` (`bootstrap/`) | State local (`bootstrap/terraform.tfstate`) | `default` | Executado apenas em mudanças de bootstrap da conta GCP. `attribute.repository` permite uso de GitHub Environments sem quebrar o subject OIDC. |
+| APIs GCP, Bucket de State, Workload Identity Pool (`github-actions-pool`), SA `github-actions-sa` | `oficina-k8s-infra` (`bootstrap/`) | State local (`bootstrap/terraform.tfstate`) | `default` | Executado apenas sob autorização explícita do usuário. `attribute.repository` permite uso de GitHub Environments sem quebrar o subject OIDC. |
 | VPC `oficina-vpc`, Subnets GKE/Serverless, VPC Connector `oficina-connector`, Private Service Access | `oficina-k8s-infra` (`infra/`) | `env/shared/k8s-infra` | `main` (único) | **Plataforma compartilhada:** `homolog` executa apenas `terraform plan` sobre o workspace `main`; `apply` exclusivo na `main` (`environment: production`). |
 | Cluster GKE Standard `oficina-gke-cluster` + Node Pool `oficina-gke-cluster-node-pool` | `oficina-k8s-infra` (`infra/`) | `env/shared/k8s-infra` | `main` (único) | **Plataforma compartilhada:** `homolog` e `production` são isolados por **Namespaces K8s** no mesmo cluster. |
 | Artifact Registry `oficina-docker` | `oficina-k8s-infra` (`infra/`) | `env/shared/k8s-infra` | `main` (único) | Repositório de imagens compartilhado; imagens são imutáveis por tag `${GITHUB_SHA}`. |
 | Helm Release `datadog` (Datadog Agent DaemonSet no namespace `datadog`) | `oficina-k8s-infra` (`infra/`) | `env/shared/k8s-infra` | `main` (único) | Reativado na P0 em `infra/main.tf` com `datadog_site = "us5.datadoghq.com"` e `TF_VAR_datadog_api_key` via GitHub Secrets. |
-| Instância Cloud SQL `oficina-postgres-db` (IP privado `10.152.0.3`), Databases `oficina_homolog` e `oficina_prod`, Usuário `oficina_user` | `oficina-database-infra` (`terraform/`) | `env/shared/database-infra` | `main` (único) | **Plataforma compartilhada:** instância única. `homolog` executa apenas `terraform plan` no workspace `main`; `apply` exclusivo na `main`. |
+| Instância Cloud SQL `oficina-postgres-db`, Databases `oficina_homolog` e `oficina_prod`, Usuário `oficina_user` | `oficina-database-infra` (`terraform/`) | `env/shared/database-infra` | `main` (único) | **Plataforma compartilhada:** instância única. `homolog` executa apenas `terraform plan` no workspace `main`; `apply` exclusivo na `main`. |
 | Secrets `database-url-homolog`, `database-url-prod`, `database-password` | `oficina-database-infra` (`terraform/`) | `env/shared/database-infra` | `main` (único) | Criados com nomes distintos por ambiente no mesmo state da instância SQL. |
 | Pub/Sub (`oficina-notificacoes-topic*`), Bucket de código, Cloud Functions v2 (`oficina-auth-function*`, `oficina-notificacoes-function*`), API Gateway (`oficina-api-gateway*`) | `oficina-serverless` (`terraform/`) | `env/shared/serverless` | `main` (prod) e `homolog` (homolog) | **Parametrizado por ambiente na P0:** workspace `main` preserva nomes legados (`env_suffix = ""`, secret `database-url-prod`); workspace `homolog` aplica sufixo `-homolog` em todos os recursos e usa `database-url-homolog`. |
 
 ---
 
-## 3. Dimensionamento do GKE (Estimativa Estática Ainda Não Validada em Runtime)
+## 5. Dimensionamento do GKE (Estimativa Estática Ainda Não Validada em Runtime)
 
-> **Importante:** Como o cluster GKE (`oficina-gke-cluster`) não pôde ser inspecionado em execução nesta sessão (`kubectl get nodes` / `kubectl describe nodes` indisponíveis localmente), os números abaixo constituem uma **estimativa estática baseada nos manifestos e no state histórico**, **ainda não validada no cluster real**. Em consonância com a diretriz da P0, **não foi realizado aumento especulativo da infraestrutura GKE** baseando-se apenas em estimativa.
-
-1. **Configuração declarada no Terraform e último apply registrado (Run `35036689334` de `oficina-k8s-infra` e `infra/modules/gke/main.tf`):**
-   - Cluster: `projects/pos-fiap-2026/locations/us-east1/clusters/oficina-gke-cluster` (GKE Standard em `us-east1`).
-   - Node Pool: `oficina-gke-cluster-node-pool` declarado com `node_count = 1`, `machine_type = "e2-medium"` (2 vCPUs / 2000m CPU nominal, 4 GiB RAM nominal; capacidade alocável teórica em GKE Standard após reservas de sistema: ~`940m` CPU e ~`2.85 GiB` RAM — *valor teórico pendente de confirmação via `kubectl describe nodes`*).
-   - *Limitação de verificação local:* A tentativa de conexão ao endpoint registrado no kubeconfig (`https://34.148.79.42`) atingiu timeout e a conta local `jonascv@gmail.com` recebeu `403 Permission denied` na API do projeto `pos-fiap-2026`.
-
-2. **Levantamento estático dos `requests` e `limits` nos manifestos locais (`oficina-api/k8s/`):**
+> **Importante:** Como nenhum cluster GKE está ativo em `fiap-project-514922` neste momento, os números abaixo constituem uma **estimativa estática baseada nos manifestos locais**, **ainda não validada em cluster real**. Não foi realizado aumento especulativo da infraestrutura GKE.
 
 | Workload | Réplicas (por env) | CPU Request (soma) | Memory Request (soma) | CPU Limit (soma) | Memory Limit (soma) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -58,67 +115,14 @@ Todos os states remotos residem no bucket GCS `gs://pos-fiap-2026-tf-state` (cri
 | `Job/oficina-api-migrate` *(transitório no deploy, `ttlSecondsAfterFinished: 300`)* | 1 durante migration | `100m` CPU | `128Mi` RAM | `300m` CPU | `256Mi` RAM |
 | `DaemonSet/datadog` *(sem requests explícitos em `modules/datadog/main.tf`)* | 1 por nó | *Não medido em runtime* (estimado ~`150m–200m`) | *Não medido em runtime* (estimado ~`256Mi–512Mi`) | *Sem limite explícito no módulo* | *Sem limite explícito no módulo* |
 
-3. **Decisão na P0 e critério para a P7:**
-   - `node_count = 1` e `machine_type = "e2-medium"` foram mantidos inalterados para não aumentar infraestrutura por estimativa.
-   - A validação real de capacidade (`kubectl get nodes`, `kubectl describe nodes`, `kubectl top nodes` e consumo efetivo do DaemonSet do Datadog + pods de sistema do `kube-system`) permanece registrada como **pendência obrigatória antes do dimensionamento/deploy da Etapa P7**.
-
 ---
 
-## 4. Governança GitHub, Environments e Comprovação de Isolamento antes de Migrations
+## 6. Pendências da Etapa P0 (Mantidas com Deploys Bloqueados)
 
-1. **Acesso do avaliador (`soat-architecture`):**
-   - Verificado via GitHub API (`repos/jcontiero/{repo}/collaborators`): o usuário `soat-architecture` possui acesso ativo nos quatro repositórios (`oficina-api`, `oficina-k8s-infra`, `oficina-database-infra` e `oficina-serverless`).
-
-2. **Ativação dos Rulesets (`main` e `homolog`):**
-   - Nos 4 repositórios, os rulesets `main` e `homolog` estavam com `"enforcement": "disabled"`.
-   - Na P0, todos os **8 rulesets** foram atualizados via API para `"enforcement": "active"`, exigindo:
-     - Proibição de deleção (`deletion`) e force-push (`non_fast_forward`);
-     - Pull Request obrigatório (`pull_request`);
-     - Status checks obrigatórios (`required_status_checks`): `validate` (ou `lint-test` no serverless), `SonarQube` e `SonarCloud Code Analysis`.
-
-3. **GitHub Environments (`homolog` e `production`) com Branch Policy estrita:**
-   - Criados e configurados via GitHub API nos 4 repositórios:
-     - Environment `homolog` (`custom_branch_policies: true`): permite deploy **exclusivamente** da branch `homolog`.
-     - Environment `production` (`custom_branch_policies: true`): permite deploy **exclusivamente** da branch `main`.
-
-4. **Trava de isolamento antes de executar migrations (`oficina-api/.github/workflows/deploy.yml`):**
-   - Antes de autenticar no GKE ou aplicar o `job-migrate.yaml`, o job `build-push-deploy` executa a etapa `Verify Homolog / Production Database Isolation Before Migration`:
-     - Em `homolog`, exige que `DB_URL` aponte explicitamente para `oficina_homolog` (ou `oficina_os_homolog`) e **aborta com erro (`exit 1`)** caso contenha `oficina_prod` ou `oficina_os_production` ou esteja vazio.
-     - Em `main` (`production`), exige que `DB_URL` aponte explicitamente para `oficina_prod` (ou `oficina_os_production`) e **aborta com erro (`exit 1`)** caso contenha `homolog`.
-   - Adicionalmente, o `job-migrate.yaml` agora recebe a imagem com tag imutável `${GITHUB_SHA}` e é aguardado com `kubectl wait --for=condition=complete job/oficina-api-migrate --timeout=120s` **antes** da aplicação dos Deployments da API e do Worker.
-
----
-
-## 5. Baseline de Testes e Cobertura
-
-1. **`oficina-api`:**
-   - **Antes das correções da P0:** `build.yml` executava apenas `tests/unit` com `--cov-fail-under=0` (141 testes passando, cobertura total de `38.83%` sobre `src/`). Os testes em `tests/integration` falhavam porque `CriarUsuario` nas fixtures `conftest.py` e `test_auth.py` era instanciado sem `uow=SQLAlchemyUnitOfWork(db)` com `autoflush=False`.
-   - **Após as correções da P0:**
-     - Removido o atributo duplicado `status: StatusCliente = StatusCliente.ATIVO` em `src/atendimento/dominio/entidades.py`.
-     - Corrigido o uso de `SQLAlchemyUnitOfWork(db)` nas fixtures de integração, a exclusão de `status` em `atualizar_cliente` e a compatibilidade do payload de token em `AtualizarStatusViaWebhook`.
-     - Resultado local verificado (`pytest tests/unit tests/integration --cov=src --cov-fail-under=80`): **186 testes passando, 0 falhas, cobertura total de `85.53%`** (acima do gate obrigatório de 80%).
-     - Gate `--cov-fail-under=80` ativado em `build.yml` e `deploy.yml`.
-
-2. **`oficina-serverless`:**
-   - Resultado local verificado (`PYTHONPATH=src:src/notificacoes pytest tests/unit --cov=src --cov-fail-under=80`): **23 testes passando, 0 falhas, cobertura total de `97.20%`**.
-   - Removido o bypass `|| echo` em `.github/workflows/ci.yml` e adicionado gate `--cov-fail-under=80` + validação de Terraform no CI.
-
----
-
-## 6. Pendências da Etapa P0 (Status: Parcialmente Concluída)
-
-A Etapa P0 permanece classificada como **parcialmente concluída** até que as cinco pendências abaixo sejam resolvidas (nenhuma delas bloqueia a execução local das etapas P1 a P6):
-
-1. **Falha de autorização no SonarCloud (`HTTP 403 Forbidden`) e merge dos 4 PRs da P0:**
-   - Na execução dos checks dos 4 PRs da P0 ([`oficina-api#12`](https://github.com/jcontiero/oficina-api/pull/12), [`oficina-k8s-infra#6`](https://github.com/jcontiero/oficina-k8s-infra/pull/6), [`oficina-database-infra#5`](https://github.com/jcontiero/oficina-database-infra/pull/5) e [`oficina-serverless#5`](https://github.com/jcontiero/oficina-serverless/pull/5)), os jobs de validação de código, cobertura ($\ge 80\%$) e Terraform passaram com sucesso, mas o job `Build/SonarQube` falhou com `GET https://api.sonarcloud.io/analysis/jres?os=linux&arch=x86_64 failed with HTTP 403 Forbidden. Please check the property sonar.token or the environment variable SONAR_TOKEN`.
-   - **Classificação correta do erro:** `HTTP 403 Forbidden` indica **falta de permissão / falha de autorização do token `SONAR_TOKEN`** (token inválido, revogado ou sem permissão `Execute Analysis` na organização/projeto do SonarCloud — não é possível afirmar apenas pelo código HTTP que a causa tenha sido expiração por prazo).
-   - **Ação pendente:** Atualizar `SONAR_TOKEN` nos 4 repositórios com um token válido com permissão de análise no SonarCloud, reexecutar o check `SonarQube`, realizar o **merge dos 4 PRs na `main`** e criar a branch `homolog` a partir da `main` atualizada.
-2. **Acesso ao projeto GCP (`pos-fiap-2026`) e verificação de capacidade real do GKE:**
-   - Restabelecer acesso autenticado ao projeto GCP e executar `kubectl get nodes -o wide`, `kubectl describe nodes` e `kubectl top nodes` para substituir a estimativa estática da Seção 3 por medição real antes de redimensionar ou implantar os três serviços na P7.
-3. **Validação operacional do Datadog Agent e do isolamento `homolog`/`production`:**
-   - Embora o módulo Terraform do Datadog e as travas de isolamento (`GitHub Environments` + validação de `DB_URL` antes de migrations + `env_suffix` serverless) estejam codificados nos PRs, sua comprovação operacional depende da aplicação em nuvem (DaemonSet `datadog` saudável reportando traces/logs e smoke test de isolamento entre `homolog` e `production`).
-4. **Configuração dos Secrets por GitHub Environment:**
-   - Cadastrar `DB_URL` no GitHub Environment `homolog` (`oficina_homolog` / `oficina_os_homolog`) e no GitHub Environment `production` (`oficina_prod` / `oficina_os_production`), além de `DATADOG_API_KEY` em `oficina-k8s-infra`.
-5. **Remoção do bloqueio temporário de deploy manual antes do aceite final de CI/CD (P7):**
-   - Atendendo à solicitação de segurança para não criar recursos na nuvem sem permissão explícita, os workflows `.github/workflows/deploy.yml` dos 4 repositórios estão temporariamente travados em `workflow_dispatch` com input `confirm_cloud_apply == 'true'` / `confirm_deploy == 'true'`.
-   - **Ação obrigatória na P7 (antes do aceite final de CI/CD e gravação do vídeo):** Remover esse bloqueio temporário para restaurar o **deploy automatizado em Kubernetes a cada push/merge em `homolog` e `main`**, conforme exigido pelo enunciado da Fase 4 (páginas 4–5).
+1. **Merge dos 4 PRs da P0 (`oficina-api#12`, `oficina-k8s-infra#6`, `oficina-database-infra#5`, `oficina-serverless#5`):**
+   - Todos os checks obrigatórios (`validate`/`lint-test`, `Build/SonarQube` e `SonarCloud Code Analysis`) estão **verdes**. Os deploys permanecem bloqueados por `workflow_dispatch` (`confirm_cloud_apply == 'true'` / `confirm_deploy == 'true'`), garantindo que o merge dos PRs **não provisionará nada na GCP**.
+2. **Definição do Bucket de State e Bootstrap no Projeto `fiap-project-514922` (somente quando autorizado):**
+   - Decidir se o state permanecerá em bucket existente ou se será executado o `bootstrap/` em `fiap-project-514922` (quando autorizado pelo usuário) para criar o Workload Identity Pool, a Service Account `github-actions-sa@fiap-project-514922.iam.gserviceaccount.com` e o bucket de state, atualizando então `backend.tf`.
+3. **Secrets por GitHub Environment (`homolog` e `production`) e Validação Operacional em Runtime:**
+   - Cadastrar `DB_URL` nos Environments `homolog` e `production` de `oficina-api` e `DATADOG_API_KEY` em `oficina-k8s-infra` antes de autorizar deploys na Etapa P7.
+   - Validar em runtime na Etapa P7 o Datadog Agent, o isolamento efetivo entre `homolog` e `production`, a medição real dos nós do GKE (`kubectl describe nodes`) e **remover o bloqueio temporário de deploy manual (`workflow_dispatch`) antes do aceite final de CI/CD**.
