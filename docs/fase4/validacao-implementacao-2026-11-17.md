@@ -277,7 +277,7 @@ Esses diretórios temporários podem ser limpos pelo sistema. As reproduções, 
 
 As correções para R01–R12 e os apontamentos de SonarCloud foram implementados com TDD (teste reproduzindo a falha antes da correção) nos três serviços:
 
-- **oficina-billing** (`fix/audit-r01-r03-r09-r10-r12-sonar`, commit `7b766b4bf4f1d81ca92f605848701a1db6596886`, PR #5):
+- **oficina-billing** (`fix/audit-r01-r03-r09-r10-r12-sonar`, commit `09747e075c5ff56ce0524a135d199cccda6858d5`, PR #5):
   - **R01:** removidos `db.commit()` internos em `OrcamentoRepositorioSql.salvar` e `registrar_tombstone_barreira`; transação única entre inbox, domínio e outbox.
   - **R03:** confirmação no provedor antes de declarar estorno/cancelamento; emissão de `PagamentoEstornoPendente.v1` em estado desconhecido (`DESCONHECIDO`).
   - **R09:** validação e população de versão e itens reais do orçamento em `PagamentoConfirmado.v1` via helper compartilhado `confirmar_pagamento_aprovado`.
