@@ -20,7 +20,7 @@ from src.config import Configuracoes
 from src.identidade.infraestrutura.jwt_provider import JwtTokenProvider
 from src.saga.aplicacao.orquestrador import OrquestradorSaga
 from src.saga.dominio.estados import EstadoSaga
-from src.saga.infraestrutura.modelos import SagaInstanceModel
+from src.saga.infraestrutura.modelos import SagaInstanceModel, SagaStepModel
 from src.shared.banco import Base
 from src.shared.infraestrutura.unit_of_work import SQLAlchemyUnitOfWork
 from src.shared.outbox import OutboxEventoModel
@@ -273,3 +273,260 @@ def test_r11_traceparent_e_correlacao_propagados_no_outbox_e_worker(tmp_path) ->
         out = db.query(OutboxEventoModel).first()
         assert out is not None
         assert out.traceparent == trace
+
+
+def test_r04_orcamento_aprovado_adiantado_reavaliado_apos_orcamento_gerado(
+    tmp_path,
+) -> None:
+    session_factory = _db_session(tmp_path)
+    orc_id = str(uuid4())
+    cli_id = str(uuid4())
+    with session_factory() as db:
+        os_id, saga_id = _seed_os_e_saga(db, estado=EstadoSaga.GERANDO_ORCAMENTO.value)
+        orq = OrquestradorSaga(db)
+        # OrcamentoAprovado.v1 chega ANTES de OrcamentoGerado.v1
+        orq.processar_evento_envelope(
+            _evt(
+                "OrcamentoAprovado.v1",
+                saga_id=saga_id,
+                os_id=os_id,
+                producer="oficina-billing",
+                payload={
+                    "rodada": 1,
+                    "orcamento_id": orc_id,
+                    "versao": 1,
+                    "cliente_id": cli_id,
+                    "total_centavos": 25000,
+                    "moeda": "BRL",
+                    "itens_peca": [],
+                },
+            )
+        )
+        # Quando OrcamentoGerado.v1 chega, a Saga transiciona para AGUARDANDO_APROVACAO
+        # e imediatamente reavalia OrcamentoAprovado.v1 pendente -> RESERVANDO_PECAS
+        orq.processar_evento_envelope(
+            _evt(
+                "OrcamentoGerado.v1",
+                saga_id=saga_id,
+                os_id=os_id,
+                producer="oficina-billing",
+                payload={
+                    "rodada": 1,
+                    "orcamento_id": orc_id,
+                    "versao": 1,
+                    "total_centavos": 25000,
+                    "moeda": "BRL",
+                },
+            )
+        )
+        saga = (
+            db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.id == str(saga_id))
+            .one()
+        )
+        assert saga.estado == EstadoSaga.RESERVANDO_PECAS.value
+        evts = [o.tipo_evento for o in db.query(OutboxEventoModel).all()]
+        assert "ReservarPecas.v1" in evts
+
+
+def test_r08_deadlines_por_etapa_e_execucao_no_worker(tmp_path) -> None:
+    from src.worker import executar_ciclo_worker
+
+    session_factory = _db_session(tmp_path)
+    with session_factory() as db:
+        os_id, saga_id = _seed_os_e_saga(db, estado=EstadoSaga.DIAGNOSTICO.value)
+        saga = (
+            db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.id == str(saga_id))
+            .one()
+        )
+        saga.deadline_at = None
+        db.commit()
+
+        OrquestradorSaga(db).processar_evento_envelope(
+            _evt(
+                "DiagnosticoConcluido.v1",
+                saga_id=saga_id,
+                os_id=os_id,
+                producer="oficina-execucao",
+                payload={
+                    "rodada": 1,
+                    "diagnostico_id": str(uuid4()),
+                    "laudo": "OK",
+                    "itens_servico": [],
+                    "itens_peca": [],
+                },
+            )
+        )
+        db.refresh(saga)
+        assert saga.estado == EstadoSaga.GERANDO_ORCAMENTO.value
+        assert saga.deadline_at is not None
+
+        # Força vencimento para verificar execução automática de expirar_sagas_vencidas no worker
+        saga.deadline_at = datetime.now(timezone.utc) - timedelta(seconds=10)
+        db.commit()
+
+    class _DummySub:
+        def subscription_path(self, p, s):
+            return s
+
+        def pull(self, request, timeout=5):
+            return type("R", (), {"received_messages": []})()
+
+    class _DummyPub:
+        def topic_path(self, p, t):
+            return t
+
+    resumo = executar_ciclo_worker(
+        session_factory,
+        publisher=_DummyPub(),
+        subscriber=_DummySub(),
+        project_id="p",
+        subscription_name="s",
+        environment="homolog",
+    )
+    assert resumo["expiradas"] == 1
+
+
+def test_r08_saga_step_concluido_por_causation_id_e_nao_ultimo_pendente(
+    tmp_path,
+) -> None:
+    session_factory = _db_session(tmp_path)
+    with session_factory() as db:
+        os_id, saga_id = _seed_os_e_saga(
+            db,
+            estado=EstadoSaga.COMPENSANDO_EFEITOS.value,
+            execucao_cancelada_event_id=str(uuid4()),
+        )
+        saga = (
+            db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.id == str(saga_id))
+            .one()
+        )
+        saga.efeitos_esperados_json = ["RESERVA", "ORCAMENTO"]
+        saga.efeitos_confirmados_json = []
+        cmd_liberar = str(uuid4())
+        cmd_cancelar_orc = str(uuid4())
+        db.add(
+            SagaStepModel(
+                saga_id=str(saga_id),
+                etapa="COMPENSANDO_EFEITOS",
+                comando_event_id=cmd_liberar,
+                comando_tipo="LiberarReserva.v1",
+                status="PENDENTE",
+                criado_em=datetime.now(timezone.utc) - timedelta(seconds=2),
+            )
+        )
+        db.add(
+            SagaStepModel(
+                saga_id=str(saga_id),
+                etapa="COMPENSANDO_EFEITOS",
+                comando_event_id=cmd_cancelar_orc,
+                comando_tipo="CancelarOrcamento.v1",
+                status="PENDENTE",
+                criado_em=datetime.now(timezone.utc) - timedelta(seconds=1),
+            )
+        )
+        db.commit()
+
+        # Chega ReservaLiberada.v1 (que corresponde ao 1o step, NÃO ao último)
+        evt = _evt(
+            "ReservaLiberada.v1",
+            saga_id=saga_id,
+            os_id=os_id,
+            producer="oficina-execucao",
+            payload={
+                "rodada": 1,
+                "compensacao_id": str(uuid4()),
+                "reserva_id": str(saga_id),
+                "resultado": "LIBERADA",
+                "motivo": "ORCAMENTO_RECUSADO",
+            },
+        )
+        evt["causation_id"] = cmd_liberar
+        OrquestradorSaga(db).processar_evento_envelope(evt)
+
+        step_lib = (
+            db.query(SagaStepModel)
+            .filter(SagaStepModel.comando_event_id == cmd_liberar)
+            .one()
+        )
+        step_orc = (
+            db.query(SagaStepModel)
+            .filter(SagaStepModel.comando_event_id == cmd_cancelar_orc)
+            .one()
+        )
+        assert step_lib.status == "CONCLUIDO"
+        assert step_orc.status == "PENDENTE"
+
+
+def test_r11_consumidor_ativa_contexto_correlacao_e_traceparent_nos_logs(
+    tmp_path, caplog
+) -> None:
+    import logging
+    from src.worker import _FiltroCorrelacaoPadrao, consumir_mensagens_pull
+
+    session_factory = _db_session(tmp_path)
+    with session_factory() as db:
+        os_id, saga_id = _seed_os_e_saga(db, estado=EstadoSaga.DIAGNOSTICO.value)
+
+    trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
+    span_id = "00f067aa0ba902b7"
+    trace = f"00-{trace_id}-{span_id}-01"
+    evt = _evt(
+        "DiagnosticoConcluido.v1",
+        saga_id=saga_id,
+        os_id=os_id,
+        producer="oficina-execucao",
+        payload={
+            "rodada": 1,
+            "diagnostico_id": str(uuid4()),
+            "laudo": "OK",
+            "itens_servico": [],
+            "itens_peca": [],
+        },
+    )
+
+    msg = type(
+        "M",
+        (),
+        {
+            "data": __import__("json").dumps(evt).encode("utf-8"),
+            "attributes": {"traceparent": trace},
+        },
+    )()
+    rec = type("Rec", (), {"ack_id": "ack-1", "message": msg})()
+
+    class _Sub:
+        def subscription_path(self, p, s):
+            return s
+
+        def pull(self, request, timeout=5):
+            return type("Resp", (), {"received_messages": [rec]})()
+
+        def acknowledge(self, request):
+            return None
+
+    target_logger = logging.getLogger("saga-orquestrador")
+    filtro = _FiltroCorrelacaoPadrao()
+    target_logger.addFilter(filtro)
+    try:
+        with caplog.at_level(logging.INFO, logger="saga-orquestrador"):
+            processadas = consumir_mensagens_pull(
+                session_factory,
+                _Sub(),
+                project_id="p",
+                subscription_name="s",
+            )
+        assert processadas == 1
+        assert any(
+            getattr(r, "correlation_id", "") == str(saga_id)
+            and getattr(r, "saga_id", "") == str(saga_id)
+            and getattr(r, "os_id", "") == str(os_id)
+            and getattr(r, "event_id", "") == evt["event_id"]
+            and getattr(r, "dd.trace_id", "0") == str(int(trace_id, 16))
+            and getattr(r, "dd.span_id", "0") == str(int(span_id, 16))
+            for r in caplog.records
+        )
+    finally:
+        target_logger.removeFilter(filtro)

@@ -15,10 +15,40 @@ from src.saga.dominio.estados import (
     SubestadoCompensacao,
     TRANSICOES_SAGA_VALIDAS,
 )
-from src.saga.infraestrutura.modelos import SagaInstanceModel, SagaStepModel
+from src.saga.infraestrutura.modelos import (
+    EventoAdiantadoModel,
+    SagaInstanceModel,
+    SagaStepModel,
+)
 from src.shared.outbox import InboxEventoModel, OutboxEventoModel
 
 logger = logging.getLogger("saga-orquestrador")
+
+DEADLINE_POR_ESTADO_SEGUNDOS: dict[EstadoSaga, int] = {
+    EstadoSaga.DIAGNOSTICO: 120,
+    EstadoSaga.GERANDO_ORCAMENTO: 120,
+    EstadoSaga.AGUARDANDO_APROVACAO: 86400,
+    EstadoSaga.RESERVANDO_PECAS: 120,
+    EstadoSaga.CRIANDO_COBRANCA: 120,
+    EstadoSaga.AGUARDANDO_PAGAMENTO: 3600,
+    EstadoSaga.ENFILEIRANDO: 120,
+}
+
+COMANDO_POR_EVENTO_RESPOSTA: dict[str, str] = {
+    "DiagnosticoConcluido.v1": "SolicitarDiagnostico.v1",
+    "OrcamentoGerado.v1": "GerarOrcamento.v1",
+    "PecasReservadas.v1": "ReservarPecas.v1",
+    "ReservaRecusada.v1": "ReservarPecas.v1",
+    "ExecucaoEnfileirada.v1": "EnfileirarExecucao.v1",
+    "ExecucaoRejeitada.v1": "EnfileirarExecucao.v1",
+    "ExecucaoCancelada.v1": "CancelarExecucao.v1",
+    "ExecucaoCancelamentoRecusado.v1": "CancelarExecucao.v1",
+    "ReservaLiberada.v1": "LiberarReserva.v1",
+    "ReservaLiberacaoRecusada.v1": "LiberarReserva.v1",
+    "OrcamentoCancelado.v1": "CancelarOrcamento.v1",
+    "PagamentoEstornado.v1": "EstornarPagamento.v1",
+    "PagamentoEstornoFalhou.v1": "EstornarPagamento.v1",
+}
 
 
 def _topico_comando(destino: str, env: str = "homolog") -> str:
@@ -117,9 +147,12 @@ class OrquestradorSaga:
             raise ValueError(
                 f"Transição de Saga inválida: {estado_atual.value} -> {novo_estado.value}"
             )
+        agora = datetime.now(timezone.utc)
         saga.estado = novo_estado.value
         saga.version += 1
-        saga.atualizada_em = datetime.now(timezone.utc)
+        saga.atualizada_em = agora
+        ttl = DEADLINE_POR_ESTADO_SEGUNDOS.get(novo_estado)
+        saga.deadline_at = agora + timedelta(seconds=ttl) if ttl is not None else None
 
     def _registrar_status_os(
         self, os_model: OrdemDeServicoModel, novo_status: StatusOS, origem: str = "SAGA"
@@ -187,75 +220,16 @@ class OrquestradorSaga:
         )
         return saga
 
-    def processar_evento_envelope(
+    def _aplicar_evento(
         self,
-        dados: dict[str, Any],
+        saga: SagaInstanceModel,
+        os_model: OrdemDeServicoModel,
+        envelope: Any,
         *,
-        consumer: str = "os-orquestrador",
         traceparent: str | None = None,
-    ) -> str:
-        """
-        Processa um evento validado com deduplicação atômica por Inbox (consumer, event_id).
-        Retorna: 'PROCESSADO', 'DUPLICADO' ou 'IGNORADO_PRECONDICAO'.
-        """
-        envelope = validar_envelope_v1(dados)
-
-        ja_processado = (
-            self.db.query(InboxEventoModel)
-            .filter(
-                InboxEventoModel.consumer == consumer,
-                InboxEventoModel.event_id == str(envelope.event_id),
-            )
-            .first()
-        )
-        if ja_processado is not None:
-            return "DUPLICADO"
-
-        saga = (
-            self.db.query(SagaInstanceModel)
-            .filter(SagaInstanceModel.id == str(envelope.saga_id))
-            .first()
-        )
-        if saga is None:
-            raise ValueError(f"Saga {envelope.saga_id} não encontrada")
-
-        os_model = (
-            self.db.query(OrdemDeServicoModel)
-            .filter(OrdemDeServicoModel.id == envelope.os_id)
-            .first()
-        )
-        if os_model is None:
-            raise ValueError(f"OS {envelope.os_id} não encontrada")
-
-        payload = envelope.payload
-        rodada_evt = payload.get("rodada")
-        if rodada_evt is not None and int(rodada_evt) != saga.rodada:
-            self.db.add(
-                InboxEventoModel(
-                    consumer=consumer,
-                    event_id=str(envelope.event_id),
-                    event_type=envelope.event_type,
-                    saga_id=saga.id,
-                )
-            )
-            self.db.commit()
-            return "IGNORADO_PRECONDICAO"
-
-        try:
-            self.db.add(
-                InboxEventoModel(
-                    consumer=consumer,
-                    event_id=str(envelope.event_id),
-                    event_type=envelope.event_type,
-                    saga_id=saga.id,
-                )
-            )
-            self.db.flush()
-        except IntegrityError:
-            self.db.rollback()
-            return "DUPLICADO"
-
+    ) -> bool:
         evt = envelope.event_type
+        payload = envelope.payload
         estado = EstadoSaga(saga.estado)
 
         if evt == "DiagnosticoConcluido.v1" and estado == EstadoSaga.DIAGNOSTICO:
@@ -277,17 +251,17 @@ class OrquestradorSaga:
                 },
                 traceparent=traceparent,
             )
+            return True
 
-        elif evt == "OrcamentoGerado.v1" and estado == EstadoSaga.GERANDO_ORCAMENTO:
+        if evt == "OrcamentoGerado.v1" and estado == EstadoSaga.GERANDO_ORCAMENTO:
             saga.orcamento_id = str(payload["orcamento_id"])
             saga.orcamento_versao = int(payload["versao"])
             saga.total_centavos = int(payload["total_centavos"])
             self._registrar_status_os(os_model, StatusOS.AGUARDANDO_APROVACAO)
             self._transicionar_saga(saga, EstadoSaga.AGUARDANDO_APROVACAO)
+            return True
 
-        elif (
-            evt == "OrcamentoAprovado.v1" and estado == EstadoSaga.AGUARDANDO_APROVACAO
-        ):
+        if evt == "OrcamentoAprovado.v1" and estado == EstadoSaga.AGUARDANDO_APROVACAO:
             self._transicionar_saga(saga, EstadoSaga.RESERVANDO_PECAS)
             self._enfileirar_comando(
                 saga=saga,
@@ -303,14 +277,14 @@ class OrquestradorSaga:
                 },
                 traceparent=traceparent,
             )
+            return True
 
-        elif (
-            evt == "OrcamentoRecusado.v1" and estado == EstadoSaga.AGUARDANDO_APROVACAO
-        ):
+        if evt == "OrcamentoRecusado.v1" and estado == EstadoSaga.AGUARDANDO_APROVACAO:
             self._registrar_status_os(os_model, StatusOS.EM_DIAGNOSTICO)
             self._transicionar_saga(saga, EstadoSaga.RECUSADA)
+            return True
 
-        elif evt == "PecasReservadas.v1" and estado == EstadoSaga.RESERVANDO_PECAS:
+        if evt == "PecasReservadas.v1" and estado == EstadoSaga.RESERVANDO_PECAS:
             self._transicionar_saga(saga, EstadoSaga.CRIANDO_COBRANCA)
             self._enfileirar_comando(
                 saga=saga,
@@ -327,13 +301,15 @@ class OrquestradorSaga:
                 },
                 traceparent=traceparent,
             )
+            return True
 
-        elif evt == "CobrancaCriada.v1" and estado == EstadoSaga.CRIANDO_COBRANCA:
+        if evt == "CobrancaCriada.v1" and estado == EstadoSaga.CRIANDO_COBRANCA:
             saga.pagamento_id = str(payload["pagamento_id"])
             self._registrar_status_os(os_model, StatusOS.AGUARDANDO_PAGAMENTO)
             self._transicionar_saga(saga, EstadoSaga.AGUARDANDO_PAGAMENTO)
+            return True
 
-        elif evt == "PagamentoConfirmado.v1" and estado in {
+        if evt == "PagamentoConfirmado.v1" and estado in {
             EstadoSaga.CRIANDO_COBRANCA,
             EstadoSaga.AGUARDANDO_PAGAMENTO,
         }:
@@ -365,22 +341,26 @@ class OrquestradorSaga:
                 },
                 traceparent=traceparent,
             )
+            return True
 
-        elif evt == "ExecucaoEnfileirada.v1" and estado == EstadoSaga.ENFILEIRANDO:
+        if evt == "ExecucaoEnfileirada.v1" and estado == EstadoSaga.ENFILEIRANDO:
             self._registrar_status_os(os_model, StatusOS.AGUARDANDO_EXECUCAO)
             self._transicionar_saga(saga, EstadoSaga.EM_EXECUCAO)
+            return True
 
-        elif evt == "ExecucaoIniciada.v1" and estado == EstadoSaga.EM_EXECUCAO:
+        if evt == "ExecucaoIniciada.v1" and estado == EstadoSaga.EM_EXECUCAO:
             self._registrar_status_os(os_model, StatusOS.EM_EXECUCAO)
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
+            return True
 
-        elif evt == "ExecucaoConcluida.v1" and estado == EstadoSaga.EM_EXECUCAO:
+        if evt == "ExecucaoConcluida.v1" and estado == EstadoSaga.EM_EXECUCAO:
             self._registrar_status_os(os_model, StatusOS.SERVICOS_CONCLUIDOS)
             self._registrar_status_os(os_model, StatusOS.FINALIZADA)
             self._transicionar_saga(saga, EstadoSaga.CONCLUIDA)
+            return True
 
-        elif evt in {
+        if evt in {
             "ReservaRecusada.v1",
             "PagamentoRecusado.v1",
             "ExecucaoRejeitada.v1",
@@ -411,8 +391,9 @@ class OrquestradorSaga:
                 },
                 traceparent=traceparent,
             )
+            return True
 
-        elif (
+        if (
             evt == "ExecucaoCancelada.v1"
             and estado == EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO
         ):
@@ -481,8 +462,9 @@ class OrquestradorSaga:
                     },
                     traceparent=traceparent,
                 )
+            return True
 
-        elif (
+        if (
             evt == "ExecucaoCancelamentoRecusado.v1"
             and estado == EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO
         ):
@@ -491,8 +473,9 @@ class OrquestradorSaga:
             )
             self._registrar_status_os(os_model, StatusOS.COMPENSACAO_PENDENTE)
             self._transicionar_saga(saga, EstadoSaga.INTERVENCAO_MANUAL)
+            return True
 
-        elif (
+        if (
             evt
             in {"ReservaLiberada.v1", "OrcamentoCancelado.v1", "PagamentoEstornado.v1"}
             and estado == EstadoSaga.COMPENSANDO_EFEITOS
@@ -517,8 +500,9 @@ class OrquestradorSaga:
                 saga.subestado_compensacao = SubestadoCompensacao.FINALIZADA.value
                 self._registrar_status_os(os_model, StatusOS.CANCELADA)
                 self._transicionar_saga(saga, EstadoSaga.COMPENSADA)
+            return True
 
-        elif evt == "PagamentoEstornoFalhou.v1" and estado in {
+        if evt == "PagamentoEstornoFalhou.v1" and estado in {
             EstadoSaga.COMPENSANDO_EFEITOS,
             EstadoSaga.COMPENSADA,
             EstadoSaga.RECUSADA,
@@ -527,8 +511,9 @@ class OrquestradorSaga:
             saga.compensacao_financeira_status = "FALHA_PENDENTE"
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
+            return True
 
-        elif evt == "PagamentoEstornoPendente.v1" and estado in {
+        if evt == "PagamentoEstornoPendente.v1" and estado in {
             EstadoSaga.COMPENSANDO_EFEITOS,
             EstadoSaga.COMPENSADA,
             EstadoSaga.RECUSADA,
@@ -537,8 +522,9 @@ class OrquestradorSaga:
             saga.compensacao_financeira_status = "PENDENTE"
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
+            return True
 
-        elif evt == "PagamentoEstornado.v1" and estado in {
+        if evt == "PagamentoEstornado.v1" and estado in {
             EstadoSaga.COMPENSADA,
             EstadoSaga.RECUSADA,
             EstadoSaga.INTERVENCAO_MANUAL,
@@ -546,15 +532,15 @@ class OrquestradorSaga:
             saga.compensacao_financeira_status = "CONCLUIDA"
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
+            return True
 
-        elif evt == "PagamentoConfirmado.v1" and estado in {
+        if evt == "PagamentoConfirmado.v1" and estado in {
             EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO,
             EstadoSaga.COMPENSANDO_EFEITOS,
             EstadoSaga.COMPENSADA,
             EstadoSaga.RECUSADA,
             EstadoSaga.INTERVENCAO_MANUAL,
         }:
-            # Pagamento confirmado tardiamente: nunca iniciar execução; estornar após barreira
             saga.pagamento_id = str(payload["pagamento_id"])
             saga.total_centavos = int(
                 payload.get("total_centavos") or saga.total_centavos or 1
@@ -604,15 +590,152 @@ class OrquestradorSaga:
                     },
                     traceparent=traceparent,
                 )
+            return True
 
-        else:
+        return False
+
+    def _reavaliar_eventos_adiantados(
+        self, saga: SagaInstanceModel, os_model: OrdemDeServicoModel
+    ) -> None:
+        while True:
+            pendentes = (
+                self.db.query(EventoAdiantadoModel)
+                .filter(
+                    EventoAdiantadoModel.saga_id == saga.id,
+                    EventoAdiantadoModel.rodada == saga.rodada,
+                    EventoAdiantadoModel.status == "PENDENTE",
+                )
+                .order_by(EventoAdiantadoModel.criado_em.asc())
+                .all()
+            )
+            progrediu = False
+            for item in pendentes:
+                env_pend = validar_envelope_v1(item.envelope_json)
+                if self._aplicar_evento(
+                    saga, os_model, env_pend, traceparent=item.traceparent
+                ):
+                    item.status = "APLICADO"
+                    item.atualizado_em = datetime.now(timezone.utc)
+                    self._concluir_step_correspondente(
+                        saga_id=saga.id,
+                        causation_id=str(env_pend.causation_id),
+                        resposta_event_id=str(env_pend.event_id),
+                        resposta_tipo=env_pend.event_type,
+                    )
+                    progrediu = True
+                    break
+            if not progrediu:
+                break
+
+    def processar_evento_envelope(
+        self,
+        dados: dict[str, Any],
+        *,
+        consumer: str = "os-orquestrador",
+        traceparent: str | None = None,
+    ) -> str:
+        """
+        Processa um evento validado com deduplicação atômica por Inbox (consumer, event_id),
+        bufferização/reavaliação geral de eventos válidos adiantados e controle concorrente.
+        """
+        envelope = validar_envelope_v1(dados)
+
+        ja_processado = (
+            self.db.query(InboxEventoModel)
+            .filter(
+                InboxEventoModel.consumer == consumer,
+                InboxEventoModel.event_id == str(envelope.event_id),
+            )
+            .first()
+        )
+        if ja_processado is not None:
+            return "DUPLICADO"
+
+        saga = (
+            self.db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.id == str(envelope.saga_id))
+            .with_for_update()
+            .first()
+        )
+        if saga is None:
+            raise ValueError(f"Saga {envelope.saga_id} não encontrada")
+
+        os_model = (
+            self.db.query(OrdemDeServicoModel)
+            .filter(OrdemDeServicoModel.id == envelope.os_id)
+            .first()
+        )
+        if os_model is None:
+            raise ValueError(f"OS {envelope.os_id} não encontrada")
+
+        payload = envelope.payload
+        rodada_evt = payload.get("rodada")
+        if rodada_evt is not None and int(rodada_evt) != saga.rodada:
+            self.db.add(
+                InboxEventoModel(
+                    consumer=consumer,
+                    event_id=str(envelope.event_id),
+                    event_type=envelope.event_type,
+                    saga_id=saga.id,
+                )
+            )
             self.db.commit()
             return "IGNORADO_PRECONDICAO"
 
-        self._concluir_step_pendente(
+        try:
+            self.db.add(
+                InboxEventoModel(
+                    consumer=consumer,
+                    event_id=str(envelope.event_id),
+                    event_type=envelope.event_type,
+                    saga_id=saga.id,
+                )
+            )
+            self.db.flush()
+        except IntegrityError:
+            self.db.rollback()
+            return "DUPLICADO"
+
+        aplicado = self._aplicar_evento(
+            saga, os_model, envelope, traceparent=traceparent
+        )
+        if not aplicado:
+            estado_atual = EstadoSaga(saga.estado)
+            estados_finais = {
+                EstadoSaga.CONCLUIDA,
+                EstadoSaga.COMPENSADA,
+                EstadoSaga.RECUSADA,
+                EstadoSaga.INTERVENCAO_MANUAL,
+            }
+            if estado_atual not in estados_finais:
+                self.db.add(
+                    EventoAdiantadoModel(
+                        saga_id=saga.id,
+                        event_id=str(envelope.event_id),
+                        event_type=envelope.event_type,
+                        rodada=saga.rodada,
+                        envelope_json=dados,
+                        traceparent=traceparent,
+                        status="PENDENTE",
+                    )
+                )
+                self.db.commit()
+                return "ADIANTADO_PENDENTE"
+            self.db.commit()
+            return "IGNORADO_PRECONDICAO"
+
+        self._concluir_step_correspondente(
             saga_id=saga.id,
+            causation_id=str(envelope.causation_id),
             resposta_event_id=str(envelope.event_id),
-            resposta_tipo=evt,
+            resposta_tipo=envelope.event_type,
+        )
+        self._reavaliar_eventos_adiantados(saga, os_model)
+        logger.info(
+            "Evento %s aplicado na Saga %s (estado=%s)",
+            envelope.event_type,
+            saga.id,
+            saga.estado,
         )
         self.db.commit()
         return "PROCESSADO"
@@ -706,18 +829,26 @@ class OrquestradorSaga:
         self.db.commit()
         return saga
 
-    def _concluir_step_pendente(
-        self, *, saga_id: str, resposta_event_id: str, resposta_tipo: str
+    def _concluir_step_correspondente(
+        self,
+        *,
+        saga_id: str,
+        causation_id: str,
+        resposta_event_id: str,
+        resposta_tipo: str,
     ) -> None:
-        step = (
-            self.db.query(SagaStepModel)
-            .filter(
-                SagaStepModel.saga_id == saga_id,
-                SagaStepModel.status == "PENDENTE",
-            )
-            .order_by(SagaStepModel.criado_em.desc())
-            .first()
+        comando_esperado = COMANDO_POR_EVENTO_RESPOSTA.get(resposta_tipo)
+        query_base = self.db.query(SagaStepModel).filter(
+            SagaStepModel.saga_id == saga_id,
+            SagaStepModel.status == "PENDENTE",
         )
+        if comando_esperado:
+            query_base = query_base.filter(
+                SagaStepModel.comando_tipo == comando_esperado
+            )
+        step = query_base.filter(SagaStepModel.comando_event_id == causation_id).first()
+        if step is None and comando_esperado:
+            step = query_base.order_by(SagaStepModel.criado_em.asc()).first()
         if step is not None:
             step.status = "CONCLUIDO"
             step.resposta_event_id = resposta_event_id
