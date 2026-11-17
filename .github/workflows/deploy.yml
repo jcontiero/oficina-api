@@ -7,6 +7,12 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: "Digite 'true' para autorizar o build/push/migration/deploy no GKE"
+        required: true
+        default: "false"
 
 env:
   PYTHON_VERSION: "3.12"
@@ -48,7 +54,7 @@ jobs:
   build-push-deploy:
     runs-on: ubuntu-latest
     needs: validate
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog')
     environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
     permissions:
       id-token: write
