@@ -676,7 +676,7 @@ def cancelar_os_via_saga_v1(
 ):
     from src.saga.aplicacao.orquestrador import OrquestradorSaga
 
-    env = request.app.state.config.environment
+    env = request.app.state.container.config.environment
     try:
         saga = OrquestradorSaga(db, environment=env).solicitar_cancelamento(
             os_id=id, traceparent=request.headers.get("traceparent")
@@ -700,7 +700,7 @@ def reprocessar_estorno_saga_v1(
 ):
     from src.saga.aplicacao.orquestrador import OrquestradorSaga
 
-    env = request.app.state.config.environment
+    env = request.app.state.container.config.environment
     try:
         saga = OrquestradorSaga(db, environment=env).reprocessar_estorno(
             os_id=id, traceparent=request.headers.get("traceparent")
