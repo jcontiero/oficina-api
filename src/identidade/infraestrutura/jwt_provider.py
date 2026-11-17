@@ -43,8 +43,9 @@ class JwtTokenProvider(ProvedorToken):
             if not actor or actor != ActorType.FUNCIONARIO.value:
                 raise ValueError("Token não possui actor_type=FUNCIONARIO")
 
+            sub_val = payload.get("sub") or payload.get("os_id")
             return Principal(
-                id=UUID(payload["sub"]),
+                id=UUID(sub_val),
                 actor_type=ActorType.FUNCIONARIO,
                 perfil=payload.get("perfil"),
             )
