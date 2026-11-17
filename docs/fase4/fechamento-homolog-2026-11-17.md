@@ -36,3 +36,19 @@ O teste em PostgreSQL real executou 16 chamadas concorrentes com uma mesma chave
 A reexecução do BDD sem limpar dados revelou uma colisão nos IDs fixos de webhook do fake. A correção gera IDs estáveis por ordem e ação. Após a correção, os dois cenários passaram novamente sobre os dados persistidos (27,31 segundos). O CI passa a executar as duas rodadas sobre a mesma stack.
 
 O Ingress existente não possuía HTTPS. Foi criado o ManagedCertificate oficina-homolog-cert e adicionada a referência ao mesmo Ingress, preservando IP e backends. Aguardar status Active e verificar TLS antes de aplicar a configuração HTTPS do Gateway. A infraestrutura não deve ser declarada pronta apenas por esse recurso ter sido criado.
+
+## Promoção aprovada da main para homologação
+
+O SonarCloud retornou `Organization is not allowed to access data from non main branches` nas análises diretas de homolog. A decisão adotada é implantar o SHA exato da main com CI/Sonar/BDD aprovados no GitHub Environment homolog. Os workflows desta rodada têm destino fixo homolog e aceitam somente a main protegida; não possuem opção para implantar produção. A política do Environment homolog permite essa origem protegida. Limites e exclusões do Sonar permanecem iguais, e análises de main e PRs continuam bloqueantes.
+
+O aceite externo autorizado identificou a dependência requests ausente na Function. Foi declarada a extra `google-auth[requests]` no manifesto do pacote de produção e no pyproject, com atualização dos locks e teste do transporte OIDC padrão. O aceite deve ser reexecutado após o deploy dessa correção.
+
+Comandos de deploy após aprovação dos checks do SHA da main:
+
+```sh
+gh workflow run deploy.yml --repo jcontiero/oficina-api --ref main -f confirm_deploy=true
+gh workflow run deploy.yml --repo jcontiero/oficina-billing --ref main -f confirm_deploy=true
+gh workflow run deploy.yml --repo jcontiero/oficina-execucao --ref main -f confirm_deploy=true
+```
+
+Os comandos acima têm destino exclusivamente em homologação. O deploy Serverless usa confirm_cloud_apply=true e backend services/oficina-serverless/homolog. A instalação do Agent é uma operação separada na plataforma compartilhada, limitada ao módulo Datadog e dependente da chave configurada no GitHub.
