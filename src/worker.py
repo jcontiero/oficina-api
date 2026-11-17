@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.config import Configuracoes
 from src.saga.aplicacao.orquestrador import OrquestradorSaga
+from src.shared.correlacao import (
+    FiltroCorrelacaoPadrao,
+    correlacao_ctx,
+    extrair_trace_e_span,
+)
 from src.shared.outbox import OutboxEventoModel
+
+_FiltroCorrelacaoPadrao = FiltroCorrelacaoPadrao
 
 if os.getenv("DD_TRACE_ENABLED", "false").lower() in {"1", "true", "yes"}:
     try:
@@ -33,6 +40,7 @@ _handler.setFormatter(
 )
 logger.handlers.clear()
 logger.addHandler(_handler)
+logger.addFilter(_FiltroCorrelacaoPadrao())
 logger.propagate = False
 
 
@@ -152,10 +160,26 @@ def consumir_mensagens_pull(
         try:
             dados = json.loads(rec.message.data.decode("utf-8"))
             traceparent = (rec.message.attributes or {}).get("traceparent")
-            with session_factory() as db:
-                OrquestradorSaga(db, environment=environment).processar_evento_envelope(
-                    dados, consumer="os-orquestrador", traceparent=traceparent
-                )
+            trace_id, span_id = extrair_trace_e_span(traceparent)
+            token = correlacao_ctx.set(
+                {
+                    "correlation_id": str(dados.get("correlation_id", "")),
+                    "saga_id": str(dados.get("saga_id", "")),
+                    "os_id": str(dados.get("os_id", "")),
+                    "event_id": str(dados.get("event_id", "")),
+                    "dd.trace_id": trace_id,
+                    "dd.span_id": span_id,
+                }
+            )
+            try:
+                with session_factory() as db:
+                    OrquestradorSaga(
+                        db, environment=environment
+                    ).processar_evento_envelope(
+                        dados, consumer="os-orquestrador", traceparent=traceparent
+                    )
+            finally:
+                correlacao_ctx.reset(token)
             subscriber.acknowledge(
                 request={"subscription": sub_path, "ack_ids": [ack_id]}
             )
@@ -175,6 +199,35 @@ def consumir_mensagens_pull(
     return processadas
 
 
+def executar_ciclo_worker(
+    session_factory: sessionmaker,
+    *,
+    publisher: Any,
+    subscriber: Any,
+    project_id: str,
+    subscription_name: str,
+    environment: str = "homolog",
+) -> dict[str, int]:
+    with session_factory() as db:
+        expiradas = OrquestradorSaga(
+            db, environment=environment
+        ).expirar_sagas_vencidas()
+    with session_factory() as db:
+        publicadas = publicar_lote_outbox(db, publisher, project_id=project_id)
+    consumidas = consumir_mensagens_pull(
+        session_factory,
+        subscriber,
+        project_id=project_id,
+        subscription_name=subscription_name,
+        environment=environment,
+    )
+    return {
+        "expiradas": expiradas,
+        "publicadas": publicadas,
+        "consumidas": consumidas,
+    }
+
+
 def main() -> None:
     cfg = Configuracoes()
     project_id = os.getenv("GCP_PROJECT_ID", "fiap-project-514922")
@@ -188,17 +241,16 @@ def main() -> None:
     logger.info("Worker OS Saga iniciado (env=%s, sub=%s)", env, sub_name)
     while True:
         try:
-            with session_factory() as db:
-                publicar_lote_outbox(db, publisher, project_id=project_id)
-            consumir_mensagens_pull(
+            executar_ciclo_worker(
                 session_factory,
-                subscriber,
+                publisher=publisher,
+                subscriber=subscriber,
                 project_id=project_id,
                 subscription_name=sub_name,
                 environment=env,
             )
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Erro no loop do worker OS Saga: %s", exc)
+        except Exception:  # noqa: BLE001
+            logger.exception("Erro no loop do worker OS Saga")
         time.sleep(0.5)
 
 

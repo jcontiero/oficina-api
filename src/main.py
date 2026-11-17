@@ -54,23 +54,7 @@ if os.getenv("DD_TRACE_ENABLED", "false").lower() in {"1", "true", "yes"}:
         pass
 
 
-class _FiltroCorrelacaoPadrao(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        for campo, padrao in (
-            ("dd.service", os.getenv("DD_SERVICE", "oficina-api")),
-            ("dd.env", os.getenv("DD_ENV", "homolog")),
-            ("dd.version", os.getenv("DD_VERSION", "0.2.0")),
-            ("dd.trace_id", "0"),
-            ("dd.span_id", "0"),
-            ("correlation_id", ""),
-            ("saga_id", ""),
-            ("os_id", ""),
-            ("event_id", ""),
-        ):
-            if not hasattr(record, campo):
-                setattr(record, campo, padrao)
-        return True
-
+from src.shared.correlacao import FiltroCorrelacaoPadrao as _FiltroCorrelacaoPadrao
 
 # Configura o logger raiz para usar JSON e injetar o Trace ID e correlação
 logger = logging.getLogger()

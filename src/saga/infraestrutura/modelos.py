@@ -90,3 +90,33 @@ class SagaStepModel(Base):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+
+
+class EventoAdiantadoModel(Base):
+    __tablename__ = "saga_eventos_adiantados"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    saga_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("saga_instances.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    rodada: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    envelope_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    traceparent: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDENTE")
+    criado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )

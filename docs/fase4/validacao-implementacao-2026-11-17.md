@@ -277,30 +277,29 @@ Esses diretórios temporários podem ser limpos pelo sistema. As reproduções, 
 
 As correções para R01–R12 e os apontamentos de SonarCloud foram implementados com TDD (teste reproduzindo a falha antes da correção) nos três serviços:
 
-- **oficina-billing** (`fix/audit-r01-r03-r09-r10-r12-sonar`, commit `09747e075c5ff56ce0524a135d199cccda6858d5`, PR #5):
-  - **R01:** removidos `db.commit()` internos em `OrcamentoRepositorioSql.salvar` e `registrar_tombstone_barreira`; transação única entre inbox, domínio e outbox.
-  - **R03:** confirmação no provedor antes de declarar estorno/cancelamento; emissão de `PagamentoEstornoPendente.v1` em estado desconhecido (`DESCONHECIDO`).
-  - **R09:** validação e população de versão e itens reais do orçamento em `PagamentoConfirmado.v1` via helper compartilhado `confirmar_pagamento_aprovado`.
-  - **R10:** tratamento de `CancelarCobranca.v1`.
-  - **R12:** `external_pos_id` e correspondência exata de `external_reference` na consulta ao Mercado Pago.
-  - **SonarCloud:** redução de complexidade cognitiva (`S3776`) em `consumidor.py` e `rotas.py`, constante compartilhada (`S1192`) e asserções simples (`S9073`).
-- **oficina-execucao** (`fix/audit-r02-r05-r10-sonar`, commit `ddcfe6a31ba84955c723d2ce869d6f5b385f10f0`, PR #5):
-  - **R02:** `iniciar_reparo` e `POST /v1/execucoes/{id}/iniciar` exigem `EM_FILA`, `pagamento_id` e reserva `ATIVA`, bloqueando início prematuro ou duplicado.
-  - **R05:** `liberar_apos_barreira` retorna `repor_estoque=False` (`JA_LIBERADA`) em reentrega de `LiberarReserva.v1`, impedindo reposição dupla de estoque.
-  - **R10:** `cancelar-barreira` executado dentro de `executar_em_transacao`, sincronizando `status=CANCELADA` no documento de execução.
-  - **SonarCloud:** refatoração de `processar_comando` (`S3776`), PEP 695 generics em `firestore_store.py` (`S6796`) e `logger.exception` em `worker.py` (`S8572`).
-- **oficina-api** (`fix/audit-r01-r04-r06-r07-r08-r10-r11`):
-  - **R01:** `AbrirOrdemDeServico.preparar_abertura` sem commit interno; OS, Saga, `SagaStep` e Outbox confirmados em uma única transação em `abrir_os_v1`.
-  - **R04:** `PagamentoConfirmado.v1` aceito também em `CRIANDO_COBRANCA`.
-  - **R06:** `PagamentoEstornado.v1`, `PagamentoEstornoFalhou.v1` e `PagamentoEstornoPendente.v1` tratados após conclusão da barreira (`COMPENSADA`, `RECUSADA`, `INTERVENCAO_MANUAL`).
-  - **R07:** `JwtTokenProvider` exige `ADMIN_JWT_PRIVATE_KEY_PEM` em `homolog`/`production` (exceto quando `allow_ephemeral_admin_jwt_key=True`); `k8s/secret.yaml` atualizado para placeholders RS256.
-  - **R08:** atualização de `SagaStepModel` em respostas, `expirar_sagas_vencidas` e claim atômico de outbox no worker.
-  - **R10:** `reabrir_nova_rodada` e `POST /v1/ordens-servico/{id}/nova-rodada` após `RECUSADA`.
-  - **R11:** propagação de `traceparent` no outbox/worker.
+| Item | Status | Resumo do que foi implementado e verificado |
+|---|---|---|
+| **R01** | **corrigido** | Remoção de commits internos em Billing (`OrcamentoRepositorioSql`) e OS (`AbrirOrdemDeServico.preparar_abertura`), preservando atomicidade transacional. |
+| **R02** | **corrigido** | `iniciar_reparo` e `POST /v1/execucoes/{id}/iniciar` exigem `EM_FILA`, `pagamento_id` e reserva `ATIVA`. |
+| **R03** | **corrigido** | Confirmação estrita no provedor antes de declarar estorno/cancelamento; emissão de `PagamentoEstornoPendente.v1` em `DESCONHECIDO` + intenção financeira durável (`commit` de `ProviderOperationModel(PENDENTE)` + `PagamentoModel` antes da chamada externa, recuperada por `reconciliar_operacoes_pendentes`). |
+| **R04** | **corrigido** | Buffer durável (`saga_eventos_adiantados` / `EventoAdiantadoModel`) e reavaliação automática de eventos válidos adiantados (ex.: `OrcamentoAprovado.v1` antes de `OrcamentoGerado.v1`) além de `PagamentoConfirmado.v1` em `CRIANDO_COBRANCA`. |
+| **R05** | **corrigido** | `liberar_apos_barreira` retorna `repor_estoque=False` (`JA_LIBERADA`) em reentrega de `LiberarReserva.v1`. |
+| **R06** | **corrigido** | `PagamentoEstornado.v1`, `PagamentoEstornoFalhou.v1` e `PagamentoEstornoPendente.v1` tratados também em `COMPENSADA`, `RECUSADA` e `INTERVENCAO_MANUAL`. |
+| **R07** | **parcial** | `JwtTokenProvider` exige `ADMIN_JWT_PRIVATE_KEY_PEM` em `homolog`/`production` (salvo `allow_ephemeral_admin_jwt_key=True` para compose/testes) e `k8s/secret.yaml` atualizado para RS256; provisionamento/entrega real da chave no Secret Manager/GKE permanece na P7. |
+| **R08** | **corrigido** | Deadlines por etapa atualizados em `_transicionar_saga`, `expirar_sagas_vencidas` executado no loop do worker (`executar_ciclo_worker`), lock pessimista (`.with_for_update()`) em `SagaInstanceModel` validado com duas respostas simultâneas em PostgreSQL, `SagaStepModel` relacionado por `causation_id` + comando esperado, e claim atômico de outbox no worker. |
+| **R09** | **corrigido** | Validação e população da versão e itens reais do orçamento em `PagamentoConfirmado.v1` via `confirmar_pagamento_aprovado`. |
+| **R10** | **corrigido** | `CancelarCobranca.v1` no Billing, `cancelar-barreira` transacional na Execução e `reabrir_nova_rodada` / `POST /v1/ordens-servico/{id}/nova-rodada` na API. |
+| **R11** | **corrigido** | Propagação de `traceparent` no outbox e extração/ativação de `correlacao_ctx` (`correlation_id`, `saga_id`, `os_id`, `event_id`, `dd.trace_id`, `dd.span_id`) nos logs do consumidor (`consumir_mensagens_pull`). |
+| **R12** | **corrigido** | Uso de `external_pos_id` e correspondência exata de `external_reference` na busca no Mercado Pago. |
+| **SonarCloud** | **corrigido** | Correção dos apontamentos de complexidade (`S3776`), literais (`S1192`), retorno constante (`S3516`), PEP 695 (`S6796`), logging (`S8572`) e testes (`S9073`, `S5778`). |
+
+- **oficina-billing** (`fix/audit-r01-r03-r09-r10-r12-sonar`, commit `b461d47d3d028a14bf1a6a85eedc97fdf21ec41b`, PR #5)
+- **oficina-execucao** (`fix/audit-r02-r05-r10-sonar`, commit `ddcfe6a31ba84955c723d2ce869d6f5b385f10f0`, PR #5)
+- **oficina-api** (`fix/audit-r01-r04-r06-r07-r08-r10-r11`, PR #20)
 
 ### Itens ainda pendentes (fora do escopo desta rodada local)
 
 - Merges dos PRs abertos (aguardando autorização).
-- Provisionamento P7 em nuvem (`bootstrap`, `terraform apply`, migração de state, deploy, Gateway/Functions/Cloud SQL/GKE/Datadog).
+- Provisionamento P7 em nuvem (`bootstrap`, `terraform apply`, migração de state, deploy, Gateway/Functions/Cloud SQL/GKE/Datadog e distribuição real de chaves RS256 — R07 operacional).
 - Aceite externo real com Mercado Pago (credenciais de teste e URL HTTPS de webhook).
 - Limpeza/inspeção manual dos arquivos não versionados com sufixo `2`.
