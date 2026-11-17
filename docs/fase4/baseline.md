@@ -8,12 +8,12 @@ Data da auditoria e execução da P0: **16 de novembro de 2026**
 
 Na inspeção inicial do workspace local (`/Users/jonascv/Library/Mobile Documents/com~apple~CloudDocs/jonas/pos_fiap`), três dos quatro repositórios estavam posicionados em branches secundárias locais cujos Pull Requests já haviam sido integrados em `origin/main`. Todos os quatro checkouts foram hidratados e alinhados em `main` (`git merge --ff-only origin/main`) antes da abertura das branches da Etapa P0:
 
-| Repositório | Branch Inicial Local | Commit Inicial Local | Commit Canônico (`origin/main`) | Status do Alinhamento Local | Branch de Correção P0 |
+| Repositório | Branch Inicial Local | Commit Inicial Local | Commit Canônico (`origin/main`) | Status do Alinhamento Local | Branch de Correção P0 / Pull Request |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `oficina-api` | `main` | `ec15d62` | `ec15d62` | Alinhado com `origin/main` | `chore/p0-baseline-ci-and-isolation` |
-| `oficina-k8s-infra` | `fix/terraform-datadog-module` | `7e5b312` | `1ef3602` (PR #5 mergeado) | Alinhado para `main` (`1ef3602`) | `chore/p0-datadog-and-state-ownership` |
-| `oficina-database-infra` | `fix/sonar-vulnerabilities` | `a11235b` | `a33bce9` (PR #4 mergeado) | Alinhado para `main` (`a33bce9`) | `chore/p0-state-ownership-and-readme` |
-| `oficina-serverless` | `feature/aumentar-cobertura-serverless` | `89562fa` | `1d45fec` (PR #4 mergeado) | Alinhado para `main` (`1d45fec`) | `chore/p0-env-parameterization-and-ci` |
+| `oficina-api` | `main` | `ec15d62` | `ec15d62` | Alinhado com `origin/main` | `chore/p0-baseline-ci-and-isolation` ([PR #12](https://github.com/jcontiero/oficina-api/pull/12)) |
+| `oficina-k8s-infra` | `fix/terraform-datadog-module` | `7e5b312` | `1ef3602` (PR #5 mergeado) | Alinhado para `main` (`1ef3602`) | `chore/p0-datadog-and-state-ownership` ([PR #6](https://github.com/jcontiero/oficina-k8s-infra/pull/6)) |
+| `oficina-database-infra` | `fix/sonar-vulnerabilities` | `a11235b` | `a33bce9` (PR #4 mergeado) | Alinhado para `main` (`a33bce9`) | `chore/p0-state-ownership-and-readme` ([PR #5](https://github.com/jcontiero/oficina-database-infra/pull/5)) |
+| `oficina-serverless` | `feature/aumentar-cobertura-serverless` | `89562fa` | `1d45fec` (PR #4 mergeado) | Alinhado para `main` (`1d45fec`) | `chore/p0-env-parameterization-and-ci` ([PR #5](https://github.com/jcontiero/oficina-serverless/pull/5)) |
 
 > **Por que a branch `homolog` não foi publicada antes dos PRs da P0:**
 > Nos workflows originais (`deploy.yml`), um push para `homolog` em `oficina-k8s-infra` e `oficina-database-infra` executava `terraform workspace select homolog || terraform workspace new homolog` seguido de `terraform apply`, o que tentaria recriar a VPC, o cluster GKE e a instância Cloud SQL em um segundo state. A branch `homolog` deve ser criada a partir de `main` **somente após** o merge dos PRs da P0 que blindam os states compartilhados e a verificação de banco no deploy.
@@ -106,9 +106,13 @@ Conforme diretriz da P0, **não foi realizado aumento especulativo da infraestru
 
 ## 6. Pendências Registradas para Continuidade / Aceite Remoto
 
-1. **Segredo `DB_URL` específico no GitHub Environment `homolog` de `oficina-api`:**
-   - Atualmente `DB_URL` existe como segredo em nível de repositório (`oficina-api`). Antes de disparar um deploy real na branch `homolog`, deve-se cadastrar o segredo `DB_URL` dentro do GitHub Environment `homolog` com a URL do banco `oficina_homolog` (valor presente no Secret Manager `database-url-homolog`). Caso não seja cadastrado e o segredo global aponte para `oficina_prod`, a nova trava `Verify Homolog / Production Database Isolation Before Migration` bloqueará a execução da migration com segurança.
-2. **Segredo `DATADOG_API_KEY` em `oficina-k8s-infra`:**
-   - Cadastrar o segredo `DATADOG_API_KEY` no repositório/environment de `oficina-k8s-infra` antes do `terraform apply` na `main` para que o Helm release do Datadog Agent receba a chave real.
-3. **Verificação do projeto GCP `pos-fiap-2026` / Cluster GKE ativo:**
-   - Validar o estado da conta/projeto GCP (`pos-fiap-2026`) antes da etapa de provisionamento em nuvem (P7) ou quando os PRs da P0 forem mergeados na `main`.
+1. **Bloqueio preventivo contra criação automática de recursos na nuvem:**
+   - Todos os 4 workflows `.github/workflows/deploy.yml` foram configurados para exigir disparo manual (`workflow_dispatch`) com confirmação explícita (`confirm_cloud_apply == 'true'` ou `confirm_deploy == 'true'`). Nenhum recurso na GCP (GKE, Cloud SQL, Cloud Functions, API Gateway ou Artifact Registry) será criado ou modificado sem permissão explícita do usuário.
+2. **Renovação do `SONAR_TOKEN` nos GitHub Secrets (HTTP 403 no SonarCloud):**
+   - Na execução dos checks dos 4 PRs da P0, os jobs de validação (`validate` / `lint-test` com cobertura $\ge 80\%$ e `terraform validate`) passaram com 100% de sucesso, mas o job `Build/SonarQube` retornou `HTTP 403 Forbidden` em `GET https://api.sonarcloud.io/analysis/jres?os=linux&arch=x86_64`, indicando expiração do `SONAR_TOKEN` cadastrado nos repositórios GitHub em setembro/2026. É necessário gerar um novo token no SonarCloud e atualizar o secret `SONAR_TOKEN` nos 4 repositórios para que o check `SonarQube` aprove o merge dos PRs.
+3. **Segredo `DB_URL` específico no GitHub Environment `homolog` de `oficina-api`:**
+   - Atualmente `DB_URL` existe como segredo em nível de repositório (`oficina-api`). Antes de autorizar um deploy real na branch `homolog`, deve-se cadastrar o segredo `DB_URL` dentro do GitHub Environment `homolog` com a URL do banco `oficina_homolog` (valor presente no Secret Manager `database-url-homolog`). Caso não seja cadastrado e o segredo global aponte para `oficina_prod`, a nova trava `Verify Homolog / Production Database Isolation Before Migration` bloqueará a execução da migration com segurança.
+4. **Segredo `DATADOG_API_KEY` em `oficina-k8s-infra`:**
+   - Cadastrar o segredo `DATADOG_API_KEY` no repositório/environment de `oficina-k8s-infra` antes de autorizar `terraform apply` na `main` para que o Helm release do Datadog Agent receba a chave real.
+5. **Verificação do projeto GCP `pos-fiap-2026` / Cluster GKE ativo:**
+   - Validar o estado da conta/projeto GCP (`pos-fiap-2026`) quando o usuário autorizar a criação/atualização de recursos em nuvem.
