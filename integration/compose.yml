@@ -68,11 +68,24 @@ services:
       pubsub-emulator:
         condition: service_healthy
 
+  os-migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+pg8000://oficina_os_user:oficina_os_pass@postgres:5432/oficina_os_homolog
+      SECRET_KEY: stack-local-secret-key-minimo-32-chars
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   oficina-os:
     build:
       context: ..
       dockerfile: Dockerfile
     environment:
+      ENVIRONMENT: homolog
       DATABASE_URL: postgresql+pg8000://oficina_os_user:oficina_os_pass@postgres:5432/oficina_os_homolog
       SECRET_KEY: stack-local-secret-key-minimo-32-chars
       GCP_PROJECT_ID: fiap-project-514922
@@ -85,8 +98,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      os-migrate:
+        condition: service_completed_successfully
       pubsub-init:
         condition: service_completed_successfully
     healthcheck:
@@ -94,6 +107,27 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  os-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["python", "-m", "src.worker"]
+    environment:
+      ENVIRONMENT: homolog
+      DATABASE_URL: postgresql+pg8000://oficina_os_user:oficina_os_pass@postgres:5432/oficina_os_homolog
+      SECRET_KEY: stack-local-secret-key-minimo-32-chars
+      GCP_PROJECT_ID: fiap-project-514922
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      DD_SERVICE: oficina-api-worker
+      DD_ENV: homolog
+      DD_VERSION: 0.2.0
+      DD_TRACE_ENABLED: "false"
+    depends_on:
+      os-migrate:
+        condition: service_completed_successfully
+      pubsub-init:
+        condition: service_completed_successfully
 
   oficina-billing:
     build:
@@ -104,23 +138,57 @@ services:
       ENVIRONMENT: homolog
       GCP_PROJECT_ID: fiap-project-514922
       PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      ADMIN_JWKS_URL: http://oficina-os:8000/.well-known/admin-jwks.json
       DD_SERVICE: oficina-billing
       DD_ENV: homolog
       DD_VERSION: 0.1.0
       DD_TRACE_ENABLED: "false"
       MP_WEBHOOK_SECRET: local-mp-webhook-secret
+      MP_PROVIDER_MODE: fake
+      MP_FAKE_STATE_FILE: /shared-mp/orders.json
     ports:
       - "8001:8000"
+    volumes:
+      - mp_fake_state:/shared-mp
+    user: "0:0"
     depends_on:
       postgres:
         condition: service_healthy
       pubsub-init:
         condition: service_completed_successfully
+      oficina-os:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')\""]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  billing-worker:
+    build:
+      context: ../../oficina-billing
+      dockerfile: Dockerfile
+    command: ["python", "-m", "src.worker"]
+    environment:
+      DATABASE_URL: postgresql+pg8000://oficina_billing_user:oficina_billing_pass@postgres:5432/oficina_billing_homolog
+      ENVIRONMENT: homolog
+      GCP_PROJECT_ID: fiap-project-514922
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      DD_SERVICE: oficina-billing-worker
+      DD_ENV: homolog
+      DD_VERSION: 0.1.0
+      DD_TRACE_ENABLED: "false"
+      MP_WEBHOOK_SECRET: local-mp-webhook-secret
+      MP_PROVIDER_MODE: fake
+      MP_FAKE_STATE_FILE: /shared-mp/orders.json
+    volumes:
+      - mp_fake_state:/shared-mp
+    user: "0:0"
+    depends_on:
+      oficina-billing:
+        condition: service_healthy
+      pubsub-init:
+        condition: service_completed_successfully
 
   oficina-execucao:
     build:
@@ -133,6 +201,7 @@ services:
       FIRESTORE_EMULATOR_HOST: firestore-emulator:8086
       PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
       USE_IN_MEMORY_STORE: "false"
+      ADMIN_JWKS_URL: http://oficina-os:8000/.well-known/admin-jwks.json
       DD_SERVICE: oficina-execucao
       DD_ENV: homolog
       DD_VERSION: 0.1.0
@@ -144,8 +213,35 @@ services:
         condition: service_healthy
       pubsub-init:
         condition: service_completed_successfully
+      oficina-os:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')\""]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  execucao-worker:
+    build:
+      context: ../../oficina-execucao
+      dockerfile: Dockerfile
+    command: ["python", "-m", "src.worker"]
+    environment:
+      ENVIRONMENT: homolog
+      GCP_PROJECT_ID: fiap-project-514922
+      FIRESTORE_DATABASE: "(default)"
+      FIRESTORE_EMULATOR_HOST: firestore-emulator:8086
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      USE_IN_MEMORY_STORE: "false"
+      DD_SERVICE: oficina-execucao-worker
+      DD_ENV: homolog
+      DD_VERSION: 0.1.0
+      DD_TRACE_ENABLED: "false"
+    depends_on:
+      oficina-execucao:
+        condition: service_healthy
+      pubsub-init:
+        condition: service_completed_successfully
+
+volumes:
+  mp_fake_state:

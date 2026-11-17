@@ -1,11 +1,12 @@
 from typing import Annotated
-from uuid import UUID, uuid4
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from src.identidade.dominio.entidades import Principal
 
 from src.shared.dependencias import get_usuario_atual, require_admin, require_mecanico
 from src.container import (
+    DBDep,
     get_abrir_ordem_de_servico,
     get_cadastrar_cliente,
     get_listar_clientes,
@@ -107,6 +108,17 @@ AdminDep = Annotated[Principal, Depends(require_admin)]
 MecanicoDep = Annotated[Principal, Depends(require_mecanico)]
 
 router = APIRouter(tags=["Atendimento"])
+
+
+def _bloquear_se_distribuido(request: Request, servico_dono: str) -> None:
+    if not request.app.state.container.config.enable_legacy_monolith_domains:
+        raise HTTPException(
+            status_code=410,
+            detail=(
+                f"Operação extraída na Fase 4: o serviço dono exclusivo é {servico_dono}. "
+                "O OS Service não executa escrita direta em orçamento, estoque ou execução."
+            ),
+        )
 
 
 # -- Clientes ------------------------------------------------------------------
@@ -257,12 +269,16 @@ def remover_veiculo(
 
 @router.post("/ordens-de-servico", response_model=OsResponse, status_code=201)
 def abrir_os_unificado(
+    request: Request,
     body: AbrirOsRequest,
     caso_de_uso: Annotated[
         AbrirOrdemDeServicoUnificada, Depends(get_abrir_ordem_de_servico_unificada)
     ],
     _: AdminDep,
 ):
+    _bloquear_se_distribuido(
+        request, "POST /v1/ordens-servico + oficina-billing/oficina-execucao"
+    )
     try:
         os = caso_de_uso.executar(
             cliente_dados=body.cliente.model_dump(),
@@ -327,6 +343,7 @@ def consultar_status_os(
 
 @router.post("/ordens-de-servico/{id}/aprovacao", response_model=OsResponse)
 def aprovar_os_fase2(
+    request: Request,
     id: UUID,
     body: AprovacaoOrcamentoRequest,
     caso_de_uso: Annotated[
@@ -334,6 +351,9 @@ def aprovar_os_fase2(
     ],
     principal: AuthDep,
 ):
+    _bloquear_se_distribuido(
+        request, "oficina-billing (POST /v1/orcamentos/{id}/decisao)"
+    )
     try:
         from src.identidade.dominio.entidades import ActorType
         from fastapi import HTTPException
@@ -359,12 +379,14 @@ def aprovar_os_fase2(
 
 @router.post("/webhooks/os/{id}/atualizar-status", response_model=OsResponse)
 def atualizar_status_via_webhook(
+    request: Request,
     id: UUID,
     body: WebhookAtualizarStatusRequest,
     caso_de_uso: Annotated[
         AtualizarStatusViaWebhook, Depends(get_atualizar_status_via_webhook)
     ],
 ):
+    _bloquear_se_distribuido(request, "oficina-billing (POST /webhooks/mercadopago)")
     try:
         novo_status = para_status_interno(body.status)
         os = caso_de_uso.executar(id, body.token, novo_status)
@@ -413,10 +435,14 @@ def acompanhar_os(
 
 @router.post("/ordens-de-servico/{id}/iniciar-diagnostico", response_model=OsResponse)
 def iniciar_diagnostico(
+    request: Request,
     id: UUID,
     caso_de_uso: Annotated[IniciarDiagnostico, Depends(get_iniciar_diagnostico)],
     _: MecanicoDep,
 ):
+    _bloquear_se_distribuido(
+        request, "oficina-execucao (POST /v1/execucoes/{id}/diagnostico)"
+    )
     try:
         return OsResponse.from_domain(caso_de_uso.executar(id))
     except TransicaoInvalidaError as e:
@@ -427,11 +453,15 @@ def iniciar_diagnostico(
 
 @router.post("/ordens-de-servico/{id}/finalizar-diagnostico", response_model=OsResponse)
 def finalizar_diagnostico(
+    request: Request,
     id: UUID,
     caso_de_uso: Annotated[FinalizarDiagnostico, Depends(get_finalizar_diagnostico)],
     _: MecanicoDep,
     body: FinalizarDiagnosticoRequest | None = None,
 ):
+    _bloquear_se_distribuido(
+        request, "oficina-execucao (POST /v1/execucoes/{id}/diagnostico)"
+    )
     try:
         laudo = body.laudo_diagnostico if body else None
         return OsResponse.from_domain(caso_de_uso.executar(id, laudo))
@@ -443,11 +473,13 @@ def finalizar_diagnostico(
 
 @router.post("/ordens-de-servico/{id}/adicionar-servico", response_model=OsResponse)
 def adicionar_servico(
+    request: Request,
     id: UUID,
     body: AdicionarServicoRequest,
     caso_de_uso: Annotated[AdicionarServico, Depends(get_adicionar_servico)],
     _: AdminDep,
 ):
+    _bloquear_se_distribuido(request, "oficina-execucao")
     try:
         os = caso_de_uso.executar(id, UUID(body.servico_id), body.observacao)
         return OsResponse.from_domain(os)
@@ -461,11 +493,13 @@ def adicionar_servico(
 
 @router.post("/ordens-de-servico/{id}/adicionar-peca", response_model=OsResponse)
 def adicionar_peca(
+    request: Request,
     id: UUID,
     body: AdicionarPecaRequest,
     caso_de_uso: Annotated[AdicionarPeca, Depends(get_adicionar_peca)],
     _: AdminDep,
 ):
+    _bloquear_se_distribuido(request, "oficina-execucao")
     try:
         os = caso_de_uso.executar(id, UUID(body.peca_id), body.quantidade)
         return OsResponse.from_domain(os)
@@ -481,10 +515,12 @@ def adicionar_peca(
 
 @router.post("/ordens-de-servico/{id}/gerar-orcamento", response_model=OsResponse)
 def gerar_orcamento(
+    request: Request,
     id: UUID,
     caso_de_uso: Annotated[GerarOrcamento, Depends(get_gerar_orcamento)],
     _: AdminDep,
 ):
+    _bloquear_se_distribuido(request, "oficina-billing")
     try:
         return OsResponse.from_domain(caso_de_uso.executar(id))
     except (TransicaoInvalidaError, OsSemServicosError) as e:
@@ -497,11 +533,15 @@ def gerar_orcamento(
     "/ordens-de-servico/{id}/executar-servico/{item_id}", response_model=OsResponse
 )
 def executar_servico(
+    request: Request,
     id: UUID,
     item_id: UUID,
     caso_de_uso: Annotated[ExecutarServico, Depends(get_executar_servico)],
     _: MecanicoDep,
 ):
+    _bloquear_se_distribuido(
+        request, "oficina-execucao (POST /v1/execucoes/{id}/iniciar|concluir)"
+    )
     try:
         return OsResponse.from_domain(caso_de_uso.executar(id, item_id))
     except (TransicaoInvalidaError, ItemNaoEncontradoError) as e:
@@ -550,14 +590,19 @@ class AbrirOsV1Request(BaseModel):
 @router.post("/v1/ordens-servico", status_code=status.HTTP_202_ACCEPTED)
 def abrir_os_v1(
     body: AbrirOsV1Request,
+    request: Request,
     response: Response,
+    db: DBDep,
     caso_de_uso: Annotated[AbrirOrdemDeServico, Depends(get_abrir_ordem_de_servico)],
     _: AdminDep,
 ):
     """
-    Contrato v1 da Fase 4: cria a OS no estado RECEBIDA e inicia a rodada da Saga
-    sem calcular orçamento nem reservar peças localmente no OS Service.
+    Contrato v1 da Fase 4: cria a OS no estado RECEBIDA, inicia a instância da Saga
+    e grava SolicitarDiagnostico.v1 na Outbox dentro da mesma transação SQL, sem
+    calcular orçamento nem reservar peças localmente no OS Service.
     """
+    from src.saga.aplicacao.orquestrador import OrquestradorSaga
+
     try:
         os_ent = caso_de_uso.executar(
             cliente_cpf_cnpj=body.cliente_documento,
@@ -569,13 +614,54 @@ def abrir_os_v1(
     except (VeiculoComOsAtivaError, ValueError) as e:
         raise HTTPException(422, str(e))
 
-    saga_id = uuid4()
+    env = request.app.state.container.config.environment
+    saga = OrquestradorSaga(db, environment=env).iniciar_saga_abertura(
+        os_id=os_ent.id,
+        cliente_id=os_ent.cliente_id,
+        veiculo_id=os_ent.veiculo_id,
+        descricao_problema=os_ent.descricao_problema,
+        traceparent=request.headers.get("traceparent"),
+    )
+    db.commit()
+
     response.headers["Location"] = f"/v1/ordens-servico/{os_ent.id}"
     return {
         "os_id": str(os_ent.id),
-        "saga_id": str(saga_id),
+        "saga_id": str(saga.id),
         "status": os_ent.status.value,
+        "estado_saga": saga.estado,
         "location": f"/v1/ordens-servico/{os_ent.id}",
+    }
+
+
+@router.get("/v1/ordens-servico/{id}/saga")
+def consultar_saga_os_v1(
+    id: UUID,
+    db: DBDep,
+    _: AuthDep,
+):
+    from src.saga.infraestrutura.modelos import SagaInstanceModel
+
+    saga = (
+        db.query(SagaInstanceModel)
+        .filter(SagaInstanceModel.os_id == str(id))
+        .order_by(SagaInstanceModel.rodada.desc())
+        .first()
+    )
+    if saga is None:
+        raise HTTPException(404, "Saga não encontrada para esta OS")
+    return {
+        "saga_id": saga.id,
+        "os_id": saga.os_id,
+        "rodada": saga.rodada,
+        "estado": saga.estado,
+        "subestado_compensacao": saga.subestado_compensacao,
+        "compensacao_financeira_status": saga.compensacao_financeira_status,
+        "execucao_cancelada_event_id": saga.execucao_cancelada_event_id,
+        "orcamento_id": saga.orcamento_id,
+        "pagamento_id": saga.pagamento_id,
+        "total_centavos": saga.total_centavos,
+        "version": saga.version,
     }
 
 
