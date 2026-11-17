@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oficina.internal/schemas/eventos-saga-v1.schema.json",
+  "title": "EventosSagaV1",
+  "description": "Payloads dos eventos de avanço, falha e compensação produzidos pelos serviços na Fase 4",
+  "$defs": {
+    "ItemServicoSnapshot": {
+      "type": "object",
+      "required": ["servico_id", "descricao", "preco_unitario_centavos"],
+      "additionalProperties": false,
+      "properties": {
+        "servico_id": { "type": "string", "format": "uuid" },
+        "descricao": { "type": "string", "minLength": 1 },
+        "preco_unitario_centavos": { "type": "integer", "minimum": 0 },
+        "observacao": { "type": "string" }
+      }
+    },
+    "ItemPecaSnapshot": {
+      "type": "object",
+      "required": ["peca_id", "descricao", "quantidade", "preco_unitario_centavos"],
+      "additionalProperties": false,
+      "properties": {
+        "peca_id": { "type": "string", "format": "uuid" },
+        "descricao": { "type": "string", "minLength": 1 },
+        "quantidade": { "type": "integer", "minimum": 1 },
+        "preco_unitario_centavos": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "DiagnosticoConcluido.v1": {
+      "type": "object",
+      "required": ["rodada", "diagnostico_id", "laudo", "itens_servico", "itens_peca"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "diagnostico_id": { "type": "string" },
+        "laudo": { "type": "string", "minLength": 1 },
+        "itens_servico": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ItemServicoSnapshot" }
+        },
+        "itens_peca": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemPecaSnapshot" }
+        }
+      }
+    },
+    "OrcamentoGerado.v1": {
+      "type": "object",
+      "required": ["rodada", "orcamento_id", "versao", "total_centavos", "moeda"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "versao": { "type": "integer", "minimum": 1 },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" }
+      }
+    },
+    "OrcamentoAprovado.v1": {
+      "type": "object",
+      "required": ["rodada", "orcamento_id", "versao", "cliente_id", "total_centavos", "moeda"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "versao": { "type": "integer", "minimum": 1 },
+        "cliente_id": { "type": "string", "format": "uuid" },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" }
+      }
+    },
+    "OrcamentoRecusado.v1": {
+      "type": "object",
+      "required": ["rodada", "orcamento_id", "versao", "cliente_id", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "versao": { "type": "integer", "minimum": 1 },
+        "cliente_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string" }
+      }
+    },
+    "PecasReservadas.v1": {
+      "type": "object",
+      "required": ["rodada", "reserva_id", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "status": { "type": "string", "enum": ["RESERVADA", "RESERVA_LOGICA_VAZIA"] }
+      }
+    },
+    "ReservaRecusada.v1": {
+      "type": "object",
+      "required": ["rodada", "reserva_id", "motivo", "pecas_indisponiveis"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "const": "ESTOQUE_INSUFICIENTE" },
+        "pecas_indisponiveis": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" }
+        }
+      }
+    },
+    "CobrancaCriada.v1": {
+      "type": "object",
+      "required": ["rodada", "orcamento_id", "pagamento_id", "provider_order_id", "qr_data", "total_centavos", "moeda"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "provider_order_id": { "type": "string", "minLength": 1 },
+        "qr_data": { "type": "string", "minLength": 1 },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" }
+      }
+    },
+    "PagamentoConfirmado.v1": {
+      "type": "object",
+      "required": ["orcamento_id", "pagamento_id", "provider_order_id", "total_centavos", "moeda", "orcamento_versao"],
+      "additionalProperties": false,
+      "properties": {
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "provider_order_id": { "type": "string", "minLength": 1 },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" },
+        "orcamento_versao": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "PagamentoRecusado.v1": {
+      "type": "object",
+      "required": ["rodada", "orcamento_id", "pagamento_id", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "enum": ["RECUSADO_PROVEDOR", "EXPIRADO", "ERRO_CRIACAO_DEFINITIVO"] }
+      }
+    },
+    "ExecucaoEnfileirada.v1": {
+      "type": "object",
+      "required": ["rodada", "execucao_id", "reserva_id", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "execucao_id": { "type": "string" },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "status": { "type": "string", "const": "AGUARDANDO_EXECUCAO" }
+      }
+    },
+    "ExecucaoRejeitada.v1": {
+      "type": "object",
+      "required": ["rodada", "reserva_id", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "enum": ["RESERVA_INATIVA", "FALHA_VALIDACAO_EXECUCAO", "FALHA_FORTE_FILA"] }
+      }
+    },
+    "ExecucaoIniciada.v1": {
+      "type": "object",
+      "required": ["rodada", "execucao_id", "reserva_consumida"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "execucao_id": { "type": "string" },
+        "reserva_consumida": { "type": "boolean", "const": true }
+      }
+    },
+    "ExecucaoConcluida.v1": {
+      "type": "object",
+      "required": ["rodada", "execucao_id", "concluida_em"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "execucao_id": { "type": "string" },
+        "concluida_em": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ExecucaoCancelada.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "resultado", "motivo", "tombstone_persistido"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "const": "CANCELADA" },
+        "motivo": { "type": "string" },
+        "execucao_id": { "type": ["string", "null"] },
+        "tombstone_persistido": { "type": "boolean", "const": true }
+      }
+    },
+    "ExecucaoCancelamentoRecusado.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "resultado", "motivo", "execucao_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "const": "RECUSADO" },
+        "motivo": { "type": "string", "const": "REPARO_INICIADO" },
+        "execucao_id": { "type": "string" }
+      }
+    },
+    "ReservaLiberada.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "reserva_id", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "enum": ["LIBERADA", "NAO_EXISTIA"] },
+        "motivo": { "type": "string" }
+      }
+    },
+    "ReservaLiberacaoRecusada.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "reserva_id", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "const": "RECUSADA" },
+        "motivo": { "type": "string", "const": "RESERVA_CONSUMIDA" }
+      }
+    },
+    "OrcamentoCancelado.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "orcamento_id", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "orcamento_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "enum": ["CANCELADO", "NAO_EXISTIA"] },
+        "motivo": { "type": "string" }
+      }
+    },
+    "CobrancaCancelada.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": ["string", "null"], "format": "uuid" },
+        "resultado": { "type": "string", "enum": ["CANCELADA", "NAO_EXISTIA"] },
+        "motivo": { "type": "string" }
+      }
+    },
+    "PagamentoEstornado.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "pagamento_id", "provider_order_id", "total_centavos", "moeda", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "provider_order_id": { "type": "string" },
+        "total_centavos": { "type": "integer", "minimum": 1 },
+        "moeda": { "type": "string", "const": "BRL" },
+        "resultado": { "type": "string", "const": "ESTORNADO" },
+        "motivo": { "type": "string" }
+      }
+    },
+    "PagamentoEstornoPendente.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "pagamento_id", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "const": "PENDENTE_RECONCILIACAO" },
+        "motivo": { "type": "string" }
+      }
+    },
+    "PagamentoEstornoFalhou.v1": {
+      "type": "object",
+      "required": ["rodada", "compensacao_id", "pagamento_id", "resultado", "motivo"],
+      "additionalProperties": false,
+      "properties": {
+        "rodada": { "type": "integer", "minimum": 1 },
+        "compensacao_id": { "type": "string", "format": "uuid" },
+        "pagamento_id": { "type": "string", "format": "uuid" },
+        "resultado": { "type": "string", "const": "FALHA_DEFINITIVA" },
+        "motivo": { "type": "string" }
+      }
+    }
+  }
+}

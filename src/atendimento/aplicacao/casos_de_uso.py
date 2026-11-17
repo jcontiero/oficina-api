@@ -822,6 +822,7 @@ class ListarOrdensDeServicoAtivas:
                 StatusOSFase2.FINALIZADA,
                 StatusOSFase2.ENTREGUE,
                 StatusOSFase2.CANCELADA,
+                StatusOSFase2.COMPENSACAO_PENDENTE,
             )
         ]
         return sorted(
@@ -860,7 +861,12 @@ class AtualizarStatusViaWebhook:
             payload = self.token_provider.decodificar(token)
         except Exception:
             raise TokenDeAprovacaoInvalidoError()
-        if payload.get("os_id") != str(os_id):
+        token_os_id = (
+            payload.get("os_id")
+            if isinstance(payload, dict)
+            else str(getattr(payload, "id", ""))
+        )
+        if token_os_id != str(os_id):
             raise TokenDeAprovacaoInvalidoError()
         os.atualizar_status(novo_status)
         return self.repo.salvar(os)

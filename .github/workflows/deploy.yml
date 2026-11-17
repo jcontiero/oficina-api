@@ -7,13 +7,23 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: "Digite 'true' para autorizar o build/push/migration/deploy no GKE"
+        required: true
+        default: "false"
 
 env:
   PYTHON_VERSION: "3.12"
-  PROJECT_ID: "pos-fiap-2026"
+  PROJECT_ID: "fiap-project-514922"
   REGION: "us-east1"
   REPOSITORY: "oficina-docker"
   IMAGE_NAME: "oficina-api"
+
+concurrency:
+  group: ci-cd-oficina-api-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   validate:
@@ -31,29 +41,127 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
       - name: Ruff check
-        run: uv run ruff check src tests scripts
+        run: uv run ruff check src tests scripts spikes integration
       - name: Black check
-        run: uv run black --check src tests scripts
-      - name: Pytest
-        run: uv run pytest tests/unit -q
+        run: uv run black --check src tests scripts spikes integration
+      - name: Pytest (unit + integration) with coverage gate (>=80%)
+        run: uv run pytest tests/unit tests/integration --cov=src --cov-fail-under=80 -q
         env:
+          DD_TRACE_ENABLED: "false"
+          TEST_DATABASE_URL: "sqlite:////tmp/oficina_ci_test.db"
           SECRET_KEY: ci-secret-key-para-testes-32-chars-ok
+
+  bdd-integrado:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    steps:
+      - name: Checkout oficina-api
+        uses: actions/checkout@v4
+        with:
+          path: oficina-api
+      - name: Checkout oficina-billing (SHA P6)
+        uses: actions/checkout@v4
+        with:
+          repository: jcontiero/oficina-billing
+          ref: 4da05bf45802bd946e4547def144fc91d033eaf2
+          path: oficina-billing
+      - name: Checkout oficina-execucao (SHA P6)
+        uses: actions/checkout@v4
+        with:
+          repository: jcontiero/oficina-execucao
+          ref: 6deb3c3b10ab733cf73764521f5563887e541df6
+          path: oficina-execucao
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies (oficina-api)
+        working-directory: oficina-api
+        run: uv sync --all-extras
+      - name: Registrar manifesto de SHAs
+        working-directory: oficina-api
+        run: |
+          mkdir -p integration/relatorios
+          cat <<EOF > integration/relatorios/manifesto-shas.json
+          {
+            "oficina-api": "$(git rev-parse HEAD)",
+            "oficina-billing": "$(git -C ../oficina-billing rev-parse HEAD)",
+            "oficina-execucao": "$(git -C ../oficina-execucao rev-parse HEAD)"
+          }
+          EOF
+          cat integration/relatorios/manifesto-shas.json
+      - name: Subir stack integrada (3 APIs, 3 workers, Postgres, Firestore e Pub/Sub)
+        working-directory: oficina-api
+        run: docker compose -f integration/compose.yml up -d --build
+      - name: Executar BDD integrado (fluxo feliz + compensação/reinício)
+        working-directory: oficina-api
+        env:
+          RUN_LIVE_BDD: "1"
+          PYTHONPATH: "."
+        run: uv run pytest tests/bdd/test_p6_bdd_integrado.py -v --junitxml=integration/relatorios/bdd-junit.xml
+      - name: Coletar logs e encerrar stack
+        if: always()
+        working-directory: oficina-api
+        run: |
+          mkdir -p integration/relatorios
+          docker compose -f integration/compose.yml logs --no-color > integration/relatorios/docker-compose.log || true
+          docker compose -f integration/compose.yml down -v || true
+      - name: Publicar relatório, logs e manifesto de SHAs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bdd-integrado-relatorios
+          path: oficina-api/integration/relatorios/
+          retention-days: 14
 
   build-push-deploy:
     runs-on: ubuntu-latest
-    needs: validate
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog'
+    needs: [validate, bdd-integrado]
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog')
+    environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Verify Homolog / Production Database Isolation Before Migration
+        env:
+          DB_URL_SECRET: ${{ secrets.DB_URL }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ -z "${DB_URL_SECRET}" ]; then
+            echo "ERROR: DB_URL secret is empty for environment (${TARGET_BRANCH}). Aborting before migration."
+            exit 1
+          fi
+          if [ "${TARGET_BRANCH}" = "homolog" ]; then
+            if echo "${DB_URL_SECRET}" | grep -Eq "oficina_prod|oficina_os_production"; then
+              echo "ERROR: Homolog deployment DB_URL points to a production database! Aborting before migration."
+              exit 1
+            fi
+            if ! echo "${DB_URL_SECRET}" | grep -Eq "oficina_homolog|oficina_os_homolog"; then
+              echo "ERROR: Homolog deployment DB_URL must explicitly target oficina_homolog or oficina_os_homolog."
+              exit 1
+            fi
+          elif [ "${TARGET_BRANCH}" = "main" ]; then
+            if echo "${DB_URL_SECRET}" | grep -Eq "homolog"; then
+              echo "ERROR: Production deployment DB_URL points to a homolog database! Aborting before migration."
+              exit 1
+            fi
+            if ! echo "${DB_URL_SECRET}" | grep -Eq "oficina_prod|oficina_os_production"; then
+              echo "ERROR: Production deployment DB_URL must explicitly target oficina_prod or oficina_os_production."
+              exit 1
+            fi
+          fi
+          echo "Database isolation verified for branch ${TARGET_BRANCH}."
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/1064199753061/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
-          service_account: 'github-actions-sa@pos-fiap-2026.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/936717667971/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
+          service_account: 'github-actions-sa@fiap-project-514922.iam.gserviceaccount.com'
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -73,19 +181,34 @@ jobs:
       - name: Get GKE Credentials
         run: gcloud container clusters get-credentials oficina-gke-cluster --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }}
 
-      - name: Deploy to K8s
+      - name: Run Coordinated Database Migration & Rollout to K8s
         env:
           DB_URL_SECRET: ${{ secrets.DB_URL }}
         run: |
-          # Usamos namespace baseado na branch
           NAMESPACE=${{ github.ref_name == 'main' && 'production' || 'homolog' }}
           kubectl apply -f k8s/namespace-${{ github.ref_name == 'main' && 'prod' || 'homolog' }}.yaml
           rm -f k8s/namespace-*.yaml
-          # Substituir a tag da imagem
+
+          # Fixar tag imutável por SHA no Job de migration, API e Worker
+          sed -i "s|latest|${{ github.sha }}|g" k8s/job-migrate.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment.yaml
           sed -i "s|latest|${{ github.sha }}|g" k8s/deployment-worker.yaml
-          # Substituir variáveis no secret
+          sed -i "s|ENVIRONMENT: \"production\"|ENVIRONMENT: \"${NAMESPACE}\"|g" k8s/configmap.yaml
           sed -i "s|DB_URL_PLACEHOLDER|${DB_URL_SECRET}|g" k8s/secret.yaml
-          
-          # Aplicar manifestos
-          kubectl apply -f k8s/ -n $NAMESPACE
+
+          # 1. Aplicar ConfigMap e Secret primeiro
+          kubectl apply -f k8s/configmap.yaml -n $NAMESPACE
+          kubectl apply -f k8s/secret.yaml -n $NAMESPACE
+
+          # 2. Executar Job de migration com imagem do SHA e aguardar conclusão antes dos Deployments
+          kubectl delete job oficina-api-migrate -n $NAMESPACE --ignore-not-found=true
+          kubectl apply -f k8s/job-migrate.yaml -n $NAMESPACE
+          kubectl wait --for=condition=complete job/oficina-api-migrate -n $NAMESPACE --timeout=120s
+
+          # 3. Aplicar Deployments, Service e HPA e aguardar rollout
+          kubectl apply -f k8s/deployment.yaml -n $NAMESPACE
+          kubectl apply -f k8s/deployment-worker.yaml -n $NAMESPACE
+          kubectl apply -f k8s/service.yaml -n $NAMESPACE
+          kubectl apply -f k8s/hpa.yaml -n $NAMESPACE
+          kubectl rollout status deployment/oficina-api -n $NAMESPACE --timeout=120s
+          kubectl rollout status deployment/oficina-api-worker -n $NAMESPACE --timeout=120s

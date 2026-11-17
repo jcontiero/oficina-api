@@ -602,6 +602,18 @@ wheels = [
 ]
 
 [[package]]
+name = "gherkin-official"
+version = "43.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/cf/974241bcfdeb0d9994b1268128b5d7c7d280b90c86eafc3af68f8d40f0a9/gherkin_official-43.0.0.tar.gz", hash = "sha256:a928f06282cd9d1f848eacd5b80dac39f318cbfc053187defa5122c8019b6e43", size = 36540, upload-time = "2026-11-13T01:07:45.661Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/c6/663271fd9bd4c28483e99546c9ea6fa107339383c36c30106bc205901767/gherkin_official-43.0.0-py3-none-any.whl", hash = "sha256:ec0e20c765c062cc457408a930ef376ccbbddd813f40e2bfedf3c72e481f96b2", size = 40021, upload-time = "2026-11-13T01:07:44.559Z" },
+]
+
+[[package]]
 name = "google-api-core"
 version = "2.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -963,12 +975,14 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "bcrypt" },
+    { name = "cryptography" },
     { name = "ddtrace" },
     { name = "fastapi" },
+    { name = "google-auth" },
     { name = "google-cloud-pubsub" },
     { name = "pg8000" },
     { name = "pydantic-settings" },
-    { name = "pyjwt" },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "python-json-logger" },
     { name = "python-multipart" },
     { name = "sqlalchemy" },
@@ -985,18 +999,25 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest-bdd" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
     { name = "bcrypt", specifier = ">=4.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "ddtrace", specifier = ">=4.14.0" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "google-auth", specifier = ">=2.28.0" },
     { name = "google-cloud-pubsub", specifier = ">=2.40.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "pg8000", specifier = ">=1.30" },
     { name = "pydantic-settings", specifier = ">=2.0" },
-    { name = "pyjwt", specifier = ">=2.8" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.8" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
@@ -1007,6 +1028,9 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.30" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest-bdd", specifier = ">=9.0.1" }]
 
 [[package]]
 name = "opentelemetry-api"
@@ -1054,6 +1078,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/f1/e7a6dd94a8d4a5626c03e4e99c87f241ba9e350cd9e6d75123f992427270/packaging-26.2.tar.gz", hash = "sha256:ff452ff5a3e828ce110190feff1178bb1f2ea2281fa2075aadb987c2fb221661", size = 228134, upload-time = "2026-04-24T20:15:23.917Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/df/b2/87e62e8c3e2f4b32e5fe99e0b86d576da1312593b39f47d8ceef365e95ed/packaging-26.2-py3-none-any.whl", hash = "sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e", size = 100195, upload-time = "2026-04-24T20:15:22.081Z" },
+]
+
+[[package]]
+name = "parse"
+version = "1.22.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/0f/4bada23d2848aaa61f3577181dbd83895fa49fb9beb406835ed7eaca1b96/parse-1.22.4.tar.gz", hash = "sha256:706d458feed5a81b02768d3156e8070baf6cee7d150a3a3c0cd43101a875c3b5", size = 40279, upload-time = "2026-10-20T21:16:07.702Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/5f/fbe039e06108eefad9e6b1f7d915a9c73ca0451700c7d48ce05eaa3a2833/parse-1.22.4-py2.py3-none-any.whl", hash = "sha256:ae430a4477316eed4a9710f642b2db968ec89d5d82e6b0908b8169673b476847", size = 21919, upload-time = "2026-10-20T21:16:06.547Z" },
+]
+
+[[package]]
+name = "parse-type"
+version = "0.6.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "parse" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/ea/42ba6ce0abba04ab6e0b997dcb9b528a4661b62af1fe1b0d498120d5ea78/parse_type-0.6.6.tar.gz", hash = "sha256:513a3784104839770d690e04339a8b4d33439fcd5dd99f2e4580f9fc1097bfb2", size = 98012, upload-time = "2025-08-11T22:53:48.066Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/8d/eef3d8cdccc32abdd91b1286884c99b8c3a6d3b135affcc2a7a0f383bb32/parse_type-0.6.6-py2.py3-none-any.whl", hash = "sha256:3ca79bbe71e170dfccc8ec6c341edfd1c2a0fc1e5cfd18330f93af938de2348c", size = 27085, upload-time = "2025-08-11T22:53:46.396Z" },
 ]
 
 [[package]]
@@ -1275,6 +1321,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a3/5e/ecf12fdb62546d64385c158514e9b2b671f7832108ef2ecd2020ce0af2d1/pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728", size = 31274, upload-time = "2026-05-21T19:54:35.362Z" },
 ]
 
+[package.optional-dependencies]
+crypto = [
+    { name = "cryptography" },
+]
+
 [[package]]
 name = "pyright"
 version = "1.1.411"
@@ -1302,6 +1353,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
+]
+
+[[package]]
+name = "pytest-bdd"
+version = "9.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gherkin-official" },
+    { name = "mako" },
+    { name = "packaging" },
+    { name = "parse" },
+    { name = "parse-type" },
+    { name = "pytest" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/b4/0a03542a8842791587a18e3a970badec23deb42fcbdfa89b1294da957100/pytest_bdd-9.0.1.tar.gz", hash = "sha256:0a0c8e54e1646d384c79c47f5756fea1b4bebf97251ff2cb52105aac951276bc", size = 59391, upload-time = "2026-10-31T14:19:39.613Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/21/325481927d82a905707c87f84ffe6a6cf007c8c43853e5359b6b657b4f12/pytest_bdd-9.0.1-py3-none-any.whl", hash = "sha256:54e84b8d497ac87af76cfbc1a285584d34eeb762072f81793c9ed7ef0993883d", size = 51220, upload-time = "2026-10-31T14:19:38.074Z" },
 ]
 
 [[package]]

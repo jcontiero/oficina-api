@@ -1,83 +1,189 @@
-import os
-import time
+from datetime import datetime, timedelta, timezone
 import json
 import logging
+import os
+import time
+from typing import Any
+
 from google.cloud import pubsub_v1
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from pythonjsonlogger import jsonlogger
+from sqlalchemy import create_engine, or_
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.config import Configuracoes
+from src.saga.aplicacao.orquestrador import OrquestradorSaga
 from src.shared.outbox import OutboxEventoModel
 
-from pythonjsonlogger import jsonlogger
-from ddtrace import patch_all
+if os.getenv("DD_TRACE_ENABLED", "false").lower() in {"1", "true", "yes"}:
+    try:
+        from ddtrace import patch_all
 
-patch_all()
+        patch_all()
+    except Exception:
+        pass
 
-logger = logging.getLogger("outbox-worker")
+logger = logging.getLogger("os-saga-worker")
 logger.setLevel(logging.INFO)
-logHandler = logging.StreamHandler()
-formatter = jsonlogger.JsonFormatter(
-    "%(asctime)s %(levelname)s %(name)s %(message)s dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s",
-    rename_fields={"levelname": "level", "asctime": "timestamp"},
+_handler = logging.StreamHandler()
+_handler.setFormatter(
+    jsonlogger.JsonFormatter(
+        "%(asctime)s %(levelname)s %(name)s %(message)s",
+        rename_fields={"levelname": "level", "asctime": "timestamp"},
+    )
 )
-logHandler.setFormatter(formatter)
-logger.addHandler(logHandler)
+logger.handlers.clear()
+logger.addHandler(_handler)
 logger.propagate = False
 
 
-def main():
-    logger.info("Iniciando Outbox Worker...")
+def publicar_lote_outbox(
+    session: Session,
+    publisher: Any,
+    *,
+    project_id: str,
+    lease_seconds: int = 30,
+    limit: int = 50,
+    agora: datetime | None = None,
+) -> int:
+    """
+    Reivindica eventos PENDENTE ou FALHA_AGENDADA vencidos com lease (locked_until),
+    publica no tópico Pub/Sub fora de trava longa e só marca PROCESSADO após ACK
+    do broker. Em falha, agenda nova tentativa com backoff exponencial sem nunca
+    abandonar o registro em estado irrecuperável.
+    """
+    ref = agora or datetime.now(timezone.utc)
+    eventos = (
+        session.query(OutboxEventoModel)
+        .filter(
+            OutboxEventoModel.status.in_(["PENDENTE", "FALHA_AGENDADA"]),
+            OutboxEventoModel.next_attempt_at <= ref,
+            or_(
+                OutboxEventoModel.locked_until.is_(None),
+                OutboxEventoModel.locked_until <= ref,
+            ),
+        )
+        .order_by(OutboxEventoModel.criado_em.asc())
+        .limit(limit)
+        .all()
+    )
+
+    if not eventos:
+        return 0
+
+    lease_expira = ref + timedelta(seconds=lease_seconds)
+    for ev in eventos:
+        ev.locked_until = lease_expira
+    session.commit()
+
+    publicados = 0
+    for ev in eventos:
+        try:
+            topic_path = publisher.topic_path(project_id, ev.topic)
+            data = json.dumps(ev.payload).encode("utf-8")
+            attrs = {
+                "event_type": ev.tipo_evento,
+                "producer": str(ev.payload.get("producer", "oficina-os")),
+                "schema_version": str(ev.payload.get("schema_version", 1)),
+            }
+            if ev.traceparent:
+                attrs["traceparent"] = ev.traceparent
+
+            future = publisher.publish(topic_path, data, **attrs)
+            future.result(timeout=10)
+            ev.status = "PROCESSADO"
+            ev.processado_em = datetime.now(timezone.utc)
+            ev.locked_until = None
+            ev.erro = None
+            publicados += 1
+        except Exception as exc:  # noqa: BLE001
+            ev.tentativas = int(ev.tentativas or 0) + 1
+            atraso = min(60, 2 ** min(ev.tentativas, 5))
+            ev.status = "FALHA_AGENDADA"
+            ev.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=atraso)
+            ev.locked_until = None
+            ev.erro = str(exc)
+            logger.error("Falha ao publicar outbox %s: %s", ev.id, exc)
+        session.commit()
+
+    return publicados
+
+
+def consumir_mensagens_pull(
+    session_factory: sessionmaker,
+    subscriber: Any,
+    *,
+    project_id: str,
+    subscription_name: str,
+    environment: str = "homolog",
+    max_messages: int = 20,
+) -> int:
+    """
+    Consome mensagens via synchronous pull do Pub/Sub e executa ACK somente após
+    o commit transacional do OrquestradorSaga. Em falha, executa modify_ack_deadline=0
+    (nack imediato) para reentrega segura.
+    """
+    sub_path = subscriber.subscription_path(project_id, subscription_name)
+    resp = subscriber.pull(
+        request={"subscription": sub_path, "max_messages": max_messages},
+        timeout=5,
+    )
+    if not resp.received_messages:
+        return 0
+
+    processadas = 0
+    for rec in resp.received_messages:
+        ack_id = rec.ack_id
+        try:
+            dados = json.loads(rec.message.data.decode("utf-8"))
+            traceparent = (rec.message.attributes or {}).get("traceparent")
+            with session_factory() as db:
+                OrquestradorSaga(db, environment=environment).processar_evento_envelope(
+                    dados, consumer="os-orquestrador", traceparent=traceparent
+                )
+            subscriber.acknowledge(
+                request={"subscription": sub_path, "ack_ids": [ack_id]}
+            )
+            processadas += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Erro ao processar mensagem no OS Orquestrador: %s", exc)
+            try:
+                subscriber.modify_ack_deadline(
+                    request={
+                        "subscription": sub_path,
+                        "ack_ids": [ack_id],
+                        "ack_deadline_seconds": 0,
+                    }
+                )
+            except Exception:  # noqa: BLE001
+                pass
+    return processadas
+
+
+def main() -> None:
     cfg = Configuracoes()
-
-    project_id = os.getenv("GCP_PROJECT_ID", "pos-fiap-2026")
-    topic_id = os.getenv("PUBSUB_TOPIC_ID", "oficina-notificacoes-topic")
-
-    # Se estiver rodando localmente sem credenciais, podemos querer pular o pubsub real
-    # Mas para o Tech Challenge, o worker deve assumir que tem credenciais ou workload identity.
-    publisher = pubsub_v1.PublisherClient()
-    topic_path = publisher.topic_path(project_id, topic_id)
-
+    project_id = os.getenv("GCP_PROJECT_ID", "fiap-project-514922")
+    env = cfg.environment
+    sub_name = os.getenv("OS_ORQUESTRADOR_SUB", f"oficina-{env}-os-orquestrador-sub")
     engine = create_engine(cfg.database_url)
-    Session = sessionmaker(bind=engine)
+    session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    publisher = pubsub_v1.PublisherClient()
+    subscriber = pubsub_v1.SubscriberClient()
 
+    logger.info("Worker OS Saga iniciado (env=%s, sub=%s)", env, sub_name)
     while True:
         try:
-            with Session() as session:
-                # Busca eventos pendentes (com LIMIT para nao estourar memoria)
-                eventos = (
-                    session.query(OutboxEventoModel)
-                    .filter(OutboxEventoModel.status == "PENDENTE")
-                    .order_by(OutboxEventoModel.criado_em.asc())
-                    .limit(50)
-                    .all()
-                )
-
-                if not eventos:
-                    time.sleep(5)
-                    continue
-
-                for evento in eventos:
-                    try:
-                        data = json.dumps(evento.payload).encode("utf-8")
-                        future = publisher.publish(
-                            topic_path, data, tipo_evento=evento.tipo_evento
-                        )
-                        message_id = future.result(timeout=10)
-
-                        logger.info(
-                            f"Evento {evento.id} publicado no Pub/Sub. Message ID: {message_id}"
-                        )
-                        evento.status = "PROCESSADO"
-                    except Exception as e:
-                        logger.error(f"Erro ao publicar evento {evento.id}: {e}")
-                        evento.status = "ERRO"
-                        evento.erro = str(e)
-
-                session.commit()
-        except Exception as e:
-            logger.error(f"Erro no loop do worker: {e}")
-            time.sleep(10)
+            with session_factory() as db:
+                publicar_lote_outbox(db, publisher, project_id=project_id)
+            consumir_mensagens_pull(
+                session_factory,
+                subscriber,
+                project_id=project_id,
+                subscription_name=sub_name,
+                environment=env,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Erro no loop do worker OS Saga: %s", exc)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":

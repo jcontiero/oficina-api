@@ -43,6 +43,7 @@ def db():
 @pytest.fixture(autouse=True)
 def limpar_banco(db):
     yield
+    db.rollback()
     for tabela in reversed(Base.metadata.sorted_tables):
         db.execute(tabela.delete())
     db.commit()
@@ -71,11 +72,12 @@ def token_admin(client, db):
     from src.identidade.aplicacao.casos_de_uso import CriarUsuario
     from src.identidade.dominio.entidades import PerfilUsuario
     from src.identidade.infraestrutura.repositorios import UsuarioRepositorioImpl
+    from src.shared.infraestrutura.unit_of_work import SQLAlchemyUnitOfWork
 
     hash_provider = BcryptHashProvider()
-    CriarUsuario(UsuarioRepositorioImpl(db), hash_provider).executar(
-        email="admin@oficina.com", senha="senha123", perfil=PerfilUsuario.ADMIN
-    )
+    CriarUsuario(
+        UsuarioRepositorioImpl(db), hash_provider, uow=SQLAlchemyUnitOfWork(db)
+    ).executar(email="admin@oficina.com", senha="senha123", perfil=PerfilUsuario.ADMIN)
     resposta = client.post(
         "/auth/login", json={"email": "admin@oficina.com", "senha": "senha123"}
     )
