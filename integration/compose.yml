@@ -61,6 +61,7 @@ services:
       PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
       GCP_PROJECT_ID: fiap-project-514922
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
     volumes:
       - ./init_pubsub.py:/app/init_pubsub.py:ro
     command: ["python", "/app/init_pubsub.py"]
@@ -86,6 +87,7 @@ services:
       dockerfile: Dockerfile
     environment:
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
       DATABASE_URL: postgresql+pg8000://oficina_os_user:oficina_os_pass@postgres:5432/oficina_os_homolog
       SECRET_KEY: stack-local-secret-key-minimo-32-chars
       GCP_PROJECT_ID: fiap-project-514922
@@ -115,6 +117,7 @@ services:
     command: ["python", "-m", "src.worker"]
     environment:
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
       DATABASE_URL: postgresql+pg8000://oficina_os_user:oficina_os_pass@postgres:5432/oficina_os_homolog
       SECRET_KEY: stack-local-secret-key-minimo-32-chars
       GCP_PROJECT_ID: fiap-project-514922
@@ -136,6 +139,7 @@ services:
     environment:
       DATABASE_URL: postgresql+pg8000://oficina_billing_user:oficina_billing_pass@postgres:5432/oficina_billing_homolog
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
       GCP_PROJECT_ID: fiap-project-514922
       PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
       ADMIN_JWKS_URL: http://oficina-os:8000/.well-known/admin-jwks.json
@@ -172,6 +176,7 @@ services:
     environment:
       DATABASE_URL: postgresql+pg8000://oficina_billing_user:oficina_billing_pass@postgres:5432/oficina_billing_homolog
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
       GCP_PROJECT_ID: fiap-project-514922
       PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
       DD_SERVICE: oficina-billing-worker
@@ -196,6 +201,7 @@ services:
       dockerfile: Dockerfile
     environment:
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
       GCP_PROJECT_ID: fiap-project-514922
       FIRESTORE_DATABASE: "(default)"
       FIRESTORE_EMULATOR_HOST: firestore-emulator:8086
@@ -228,6 +234,7 @@ services:
     command: ["python", "-m", "src.worker"]
     environment:
       ENVIRONMENT: homolog
+      ALLOW_EPHEMERAL_ADMIN_JWT_KEY: "true"
       GCP_PROJECT_ID: fiap-project-514922
       FIRESTORE_DATABASE: "(default)"
       FIRESTORE_EMULATOR_HOST: firestore-emulator:8086

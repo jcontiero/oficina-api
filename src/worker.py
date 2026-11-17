@@ -71,12 +71,28 @@ def publicar_lote_outbox(
         return 0
 
     lease_expira = ref + timedelta(seconds=lease_seconds)
+    reivindicados: list[OutboxEventoModel] = []
     for ev in eventos:
-        ev.locked_until = lease_expira
+        atualizado = (
+            session.query(OutboxEventoModel)
+            .filter(
+                OutboxEventoModel.id == ev.id,
+                OutboxEventoModel.status.in_(["PENDENTE", "FALHA_AGENDADA"]),
+                or_(
+                    OutboxEventoModel.locked_until.is_(None),
+                    OutboxEventoModel.locked_until <= ref,
+                ),
+            )
+            .update({"locked_until": lease_expira}, synchronize_session=False)
+        )
+        if atualizado == 1:
+            reivindicados.append(ev)
     session.commit()
+    if not reivindicados:
+        return 0
 
     publicados = 0
-    for ev in eventos:
+    for ev in reivindicados:
         try:
             topic_path = publisher.topic_path(project_id, ev.topic)
             data = json.dumps(ev.payload).encode("utf-8")
@@ -144,8 +160,8 @@ def consumir_mensagens_pull(
                 request={"subscription": sub_path, "ack_ids": [ack_id]}
             )
             processadas += 1
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Erro ao processar mensagem no OS Orquestrador: %s", exc)
+        except Exception:  # noqa: BLE001
+            logger.exception("Erro ao processar mensagem no OS Orquestrador")
             try:
                 subscriber.modify_ack_deadline(
                     request={

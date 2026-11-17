@@ -255,8 +255,7 @@ class AbrirOrdemDeServico:
 
         self.uow = uow
 
-    @transactional
-    def executar(
+    def preparar_abertura(
         self, cliente_cpf_cnpj: str, veiculo_placa: str, descricao_problema: str
     ) -> OrdemDeServico:
         documento = re.sub(r"\D", "", cliente_cpf_cnpj)
@@ -282,6 +281,14 @@ class AbrirOrdemDeServico:
             descricao_problema=descricao_problema,
         )
         return self.os_repo.salvar(os)
+
+    @transactional
+    def executar(
+        self, cliente_cpf_cnpj: str, veiculo_placa: str, descricao_problema: str
+    ) -> OrdemDeServico:
+        return self.preparar_abertura(
+            cliente_cpf_cnpj, veiculo_placa, descricao_problema
+        )
 
 
 class ListarOrdensDeServico:

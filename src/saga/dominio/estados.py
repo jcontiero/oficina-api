@@ -70,6 +70,7 @@ TRANSICOES_SAGA_VALIDAS: dict[EstadoSaga, list[EstadoSaga]] = {
     ],
     EstadoSaga.CRIANDO_COBRANCA: [
         EstadoSaga.AGUARDANDO_PAGAMENTO,
+        EstadoSaga.ENFILEIRANDO,
         EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO,
     ],
     EstadoSaga.AGUARDANDO_PAGAMENTO: [
