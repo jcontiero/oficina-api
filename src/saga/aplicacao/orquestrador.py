@@ -333,10 +333,10 @@ class OrquestradorSaga:
             self._registrar_status_os(os_model, StatusOS.AGUARDANDO_PAGAMENTO)
             self._transicionar_saga(saga, EstadoSaga.AGUARDANDO_PAGAMENTO)
 
-        elif (
-            evt == "PagamentoConfirmado.v1"
-            and estado == EstadoSaga.AGUARDANDO_PAGAMENTO
-        ):
+        elif evt == "PagamentoConfirmado.v1" and estado in {
+            EstadoSaga.CRIANDO_COBRANCA,
+            EstadoSaga.AGUARDANDO_PAGAMENTO,
+        }:
             saga.pagamento_id = str(payload["pagamento_id"])
             self._transicionar_saga(saga, EstadoSaga.ENFILEIRANDO)
             self._enfileirar_comando(
@@ -518,11 +518,32 @@ class OrquestradorSaga:
                 self._registrar_status_os(os_model, StatusOS.CANCELADA)
                 self._transicionar_saga(saga, EstadoSaga.COMPENSADA)
 
-        elif (
-            evt == "PagamentoEstornoFalhou.v1"
-            and estado == EstadoSaga.COMPENSANDO_EFEITOS
-        ):
+        elif evt == "PagamentoEstornoFalhou.v1" and estado in {
+            EstadoSaga.COMPENSANDO_EFEITOS,
+            EstadoSaga.COMPENSADA,
+            EstadoSaga.RECUSADA,
+            EstadoSaga.INTERVENCAO_MANUAL,
+        }:
             saga.compensacao_financeira_status = "FALHA_PENDENTE"
+            saga.version += 1
+            saga.atualizada_em = datetime.now(timezone.utc)
+
+        elif evt == "PagamentoEstornoPendente.v1" and estado in {
+            EstadoSaga.COMPENSANDO_EFEITOS,
+            EstadoSaga.COMPENSADA,
+            EstadoSaga.RECUSADA,
+            EstadoSaga.INTERVENCAO_MANUAL,
+        }:
+            saga.compensacao_financeira_status = "PENDENTE"
+            saga.version += 1
+            saga.atualizada_em = datetime.now(timezone.utc)
+
+        elif evt == "PagamentoEstornado.v1" and estado in {
+            EstadoSaga.COMPENSADA,
+            EstadoSaga.RECUSADA,
+            EstadoSaga.INTERVENCAO_MANUAL,
+        }:
+            saga.compensacao_financeira_status = "CONCLUIDA"
             saga.version += 1
             saga.atualizada_em = datetime.now(timezone.utc)
 
@@ -588,6 +609,11 @@ class OrquestradorSaga:
             self.db.commit()
             return "IGNORADO_PRECONDICAO"
 
+        self._concluir_step_pendente(
+            saga_id=saga.id,
+            resposta_event_id=str(envelope.event_id),
+            resposta_tipo=evt,
+        )
         self.db.commit()
         return "PROCESSADO"
 
@@ -679,3 +705,117 @@ class OrquestradorSaga:
         )
         self.db.commit()
         return saga
+
+    def _concluir_step_pendente(
+        self, *, saga_id: str, resposta_event_id: str, resposta_tipo: str
+    ) -> None:
+        step = (
+            self.db.query(SagaStepModel)
+            .filter(
+                SagaStepModel.saga_id == saga_id,
+                SagaStepModel.status == "PENDENTE",
+            )
+            .order_by(SagaStepModel.criado_em.desc())
+            .first()
+        )
+        if step is not None:
+            step.status = "CONCLUIDO"
+            step.resposta_event_id = resposta_event_id
+            step.resposta_tipo = resposta_tipo
+            step.atualizado_em = datetime.now(timezone.utc)
+
+    def expirar_sagas_vencidas(self, *, agora: datetime | None = None) -> int:
+        ref = agora or datetime.now(timezone.utc)
+        estados_expiraveis = [
+            EstadoSaga.DIAGNOSTICO.value,
+            EstadoSaga.GERANDO_ORCAMENTO.value,
+            EstadoSaga.AGUARDANDO_APROVACAO.value,
+            EstadoSaga.AGUARDANDO_PAGAMENTO.value,
+        ]
+        sagas = (
+            self.db.query(SagaInstanceModel)
+            .filter(
+                SagaInstanceModel.estado.in_(estados_expiraveis),
+                SagaInstanceModel.deadline_at.is_not(None),
+                SagaInstanceModel.deadline_at <= ref,
+            )
+            .all()
+        )
+        expiradas = 0
+        for saga in sagas:
+            os_model = (
+                self.db.query(OrdemDeServicoModel)
+                .filter(OrdemDeServicoModel.id == UUID(saga.os_id))
+                .first()
+            )
+            if os_model is None:
+                continue
+            motivo_timeout_map = {
+                EstadoSaga.DIAGNOSTICO.value: MotivoCompensacao.TIMEOUT_DIAGNOSTICO.value,
+                EstadoSaga.GERANDO_ORCAMENTO.value: MotivoCompensacao.TIMEOUT_ORCAMENTO.value,
+                EstadoSaga.AGUARDANDO_PAGAMENTO.value: MotivoCompensacao.PAGAMENTO_EXPIRADO.value,
+            }
+            comp_id = uuid4()
+            saga.compensacao_id = str(comp_id)
+            saga.motivo_compensacao = motivo_timeout_map.get(
+                saga.estado, MotivoCompensacao.TIMEOUT_DIAGNOSTICO.value
+            )
+            saga.subestado_compensacao = (
+                SubestadoCompensacao.AGUARDANDO_BARREIRA_EXECUCAO.value
+            )
+            self._registrar_status_os(
+                os_model, StatusOS.COMPENSACAO_PENDENTE, origem="WORKER_TIMEOUT"
+            )
+            self._transicionar_saga(saga, EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO)
+            self._enfileirar_comando(
+                saga=saga,
+                destino="execucao",
+                event_type="CancelarExecucao.v1",
+                causation_id=UUID(saga.id),
+                payload={
+                    "rodada": saga.rodada,
+                    "compensacao_id": str(comp_id),
+                    "motivo": saga.motivo_compensacao,
+                    "execucao_id": None,
+                },
+            )
+            expiradas += 1
+        if expiradas:
+            self.db.commit()
+        return expiradas
+
+    def reabrir_nova_rodada(
+        self,
+        *,
+        os_id: UUID,
+        traceparent: str | None = None,
+    ) -> SagaInstanceModel:
+        anterior = (
+            self.db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.os_id == str(os_id))
+            .order_by(SagaInstanceModel.rodada.desc())
+            .first()
+        )
+        if anterior is None:
+            raise ValueError("Saga não encontrada para a OS")
+        if anterior.estado != EstadoSaga.RECUSADA.value:
+            raise ValueError("Nova rodada só é permitida após recusa de orçamento")
+        os_model = (
+            self.db.query(OrdemDeServicoModel)
+            .filter(OrdemDeServicoModel.id == os_id)
+            .first()
+        )
+        if os_model is None:
+            raise ValueError("OS não encontrada")
+
+        self._registrar_status_os(os_model, StatusOS.EM_DIAGNOSTICO, origem="API")
+        nova_saga = self.iniciar_saga_abertura(
+            os_id=os_id,
+            cliente_id=os_model.cliente_id,
+            veiculo_id=os_model.veiculo_id,
+            descricao_problema=os_model.descricao_problema,
+            rodada=anterior.rodada + 1,
+            traceparent=traceparent,
+        )
+        self.db.commit()
+        return nova_saga

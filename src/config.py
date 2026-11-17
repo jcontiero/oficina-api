@@ -4,13 +4,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Configuracoes(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    environment: str = "homolog"
+    environment: str = "local"
     database_url: str = "sqlite:///./test.db"
     secret_key: str = "default-secret-key-for-dev-and-tests-min-32-chars"
     algorithm: str = "RS256"
 
     admin_jwt_key_id: str = "oficina-admin-rsa-key-2026"
     admin_jwt_private_key_pem: str = ""
+    allow_ephemeral_admin_jwt_key: bool = False
     jwt_audience: str = "oficina-backend-homolog"
     jwt_admin_issuer: str = "oficina-admin-homolog"
     jwt_client_issuer: str = "oficina-auth-homolog"

@@ -604,25 +604,29 @@ def abrir_os_v1(
     from src.saga.aplicacao.orquestrador import OrquestradorSaga
 
     try:
-        os_ent = caso_de_uso.executar(
+        os_ent = caso_de_uso.preparar_abertura(
             cliente_cpf_cnpj=body.cliente_documento,
             veiculo_placa=body.veiculo_placa,
             descricao_problema=body.descricao_problema,
         )
+        env = request.app.state.container.config.environment
+        saga = OrquestradorSaga(db, environment=env).iniciar_saga_abertura(
+            os_id=os_ent.id,
+            cliente_id=os_ent.cliente_id,
+            veiculo_id=os_ent.veiculo_id,
+            descricao_problema=os_ent.descricao_problema,
+            traceparent=request.headers.get("traceparent"),
+        )
+        db.commit()
     except (ClienteNaoEncontradoError, VeiculoNaoEncontradoError) as e:
+        db.rollback()
         raise HTTPException(404, str(e))
     except (VeiculoComOsAtivaError, ValueError) as e:
+        db.rollback()
         raise HTTPException(422, str(e))
-
-    env = request.app.state.container.config.environment
-    saga = OrquestradorSaga(db, environment=env).iniciar_saga_abertura(
-        os_id=os_ent.id,
-        cliente_id=os_ent.cliente_id,
-        veiculo_id=os_ent.veiculo_id,
-        descricao_problema=os_ent.descricao_problema,
-        traceparent=request.headers.get("traceparent"),
-    )
-    db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     response.headers["Location"] = f"/v1/ordens-servico/{os_ent.id}"
     return {
@@ -712,6 +716,31 @@ def reprocessar_estorno_saga_v1(
         "os_id": saga.os_id,
         "estado": saga.estado,
         "compensacao_financeira_status": saga.compensacao_financeira_status,
+    }
+
+
+@router.post("/v1/ordens-servico/{id}/nova-rodada")
+def nova_rodada_os_v1(
+    id: UUID,
+    request: Request,
+    db: DBDep,
+    _: AdminDep,
+):
+    from src.saga.aplicacao.orquestrador import OrquestradorSaga
+
+    env = request.app.state.container.config.environment
+    try:
+        saga = OrquestradorSaga(db, environment=env).reabrir_nova_rodada(
+            os_id=id,
+            traceparent=request.headers.get("traceparent"),
+        )
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+    return {
+        "saga_id": saga.id,
+        "os_id": saga.os_id,
+        "rodada": saga.rodada,
+        "estado": saga.estado,
     }
 
 
