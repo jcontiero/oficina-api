@@ -33,7 +33,7 @@ spec:
             - |
               export DATABASE_URL=$(cat /mnt/secrets-store/database-url)
               export SECRET_KEY=$(cat /mnt/secrets-store/secret-key)
-              export ADMIN_JWT_PRIVATE_KEY_PEM=$(cat /mnt/secrets-store/admin-jwt-private-key-pem)
+              export ADMIN_JWT_PRIVATE_KEY_PEM="$(cat /mnt/secrets-store/admin-jwt-private-key-pem)"
               exec python -m src.worker
           envFrom:
             - configMapRef:
