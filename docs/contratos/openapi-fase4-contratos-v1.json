@@ -1,0 +1,202 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Oficina Mecânica · Contratos HTTP v1 dos Três Microsserviços (Fase 4)",
+    "version": "1.0.0",
+    "description": "Especificação OpenAPI 3.1 consolidada dos contratos HTTP v1 propostos para OS Service (oficina-api), Billing Service (oficina-billing) e Execução Service (oficina-execucao)."
+  },
+  "paths": {
+    "/v1/ordens-servico": {
+      "post": {
+        "tags": ["OS Service"],
+        "summary": "Abre uma nova Ordem de Serviço e inicia a Saga",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "OS recebida e Saga iniciada (SolicitarDiagnostico.v1 enfileirado na outbox)"
+          }
+        }
+      },
+      "get": {
+        "tags": ["OS Service"],
+        "summary": "Lista Ordens de Serviço ativas ordenadas por prioridade",
+        "responses": {
+          "200": { "description": "Lista ordenada de OS ativas" }
+        }
+      }
+    },
+    "/v1/ordens-servico/{id}": {
+      "get": {
+        "tags": ["OS Service"],
+        "summary": "Consulta status da OS, estado da Saga e projeção financeira/operacional",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Detalhes da OS e projeções" },
+          "404": { "description": "OS inexistente ou não pertencente ao cliente autenticado" }
+        }
+      }
+    },
+    "/v1/ordens-servico/{id}/historico": {
+      "get": {
+        "tags": ["OS Service"],
+        "summary": "Consulta histórico auditável de transições da OS e etapas da Saga",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Histórico cronológico da OS" }
+        }
+      }
+    },
+    "/v1/ordens-servico/{id}/entrega": {
+      "post": {
+        "tags": ["OS Service"],
+        "summary": "Registra a entrega do veículo quando a OS está FINALIZADA",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "OS transicionada para ENTREGUE" },
+          "409": { "description": "Estado incompatível (OS ainda não finalizada)" }
+        }
+      }
+    },
+    "/internal/clientes/autenticacao": {
+      "post": {
+        "tags": ["OS Service · Interno"],
+        "summary": "Consulta interna de cliente por CPF para a Cloud Function de autenticação",
+        "responses": {
+          "200": { "description": "Retorna id e status (ATIVO/INATIVO) do cliente" },
+          "401": { "description": "ID Token Google ausente ou inválido" },
+          "403": { "description": "Service Account chamadora não autorizada" },
+          "404": { "description": "Cliente não encontrado" }
+        }
+      }
+    },
+    "/internal/sagas/{id}/retomar": {
+      "post": {
+        "tags": ["OS Service · Operação"],
+        "summary": "Retoma de forma auditada e idempotente uma Saga pendente de compensação ou intervenção",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "Idempotency-Key", "in": "header", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "202": { "description": "Retomada agendada" }
+        }
+      }
+    },
+    "/v1/orcamentos/{id}": {
+      "get": {
+        "tags": ["Billing Service"],
+        "summary": "Consulta orçamento versionado e seus itens congelados em centavos",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Dados do orçamento versionado" }
+        }
+      }
+    },
+    "/v1/orcamentos/{id}/decisao": {
+      "post": {
+        "tags": ["Billing Service"],
+        "summary": "Registra aprovação ou recusa do orçamento vigente pelo cliente dono",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "202": { "description": "Decisão registrada e evento (OrcamentoAprovado.v1 / OrcamentoRecusado.v1) enfileirado" },
+          "409": { "description": "Versão divergente ou orçamento já decidido/cancelado" }
+        }
+      }
+    },
+    "/v1/pagamentos/{id}": {
+      "get": {
+        "tags": ["Billing Service"],
+        "summary": "Consulta status do pagamento e qr_data dinâmico do Mercado Pago",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Dados da cobrança e QR Code dinâmico" }
+        }
+      }
+    },
+    "/webhooks/mercadopago": {
+      "post": {
+        "tags": ["Billing Service"],
+        "summary": "Recebe notificações de orders do Mercado Pago validadas por x-signature",
+        "parameters": [
+          { "name": "x-signature", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "x-request-id", "in": "header", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Webhook persistido em webhook_inbox para reconciliação" },
+          "401": { "description": "Assinatura x-signature inválida" }
+        }
+      }
+    },
+    "/v1/execucoes": {
+      "get": {
+        "tags": ["Execução Service"],
+        "summary": "Lista diagnósticos e execuções na fila da oficina",
+        "responses": {
+          "200": { "description": "Fila de execução" }
+        }
+      }
+    },
+    "/v1/execucoes/{id}/diagnostico": {
+      "post": {
+        "tags": ["Execução Service"],
+        "summary": "Registra conclusão de diagnóstico técnico com itens de serviço e peças",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Diagnóstico salvo e DiagnosticoConcluido.v1 emitido" },
+          "409": { "description": "Execução cancelada (tombstone ativo)" }
+        }
+      }
+    },
+    "/v1/execucoes/{id}/iniciar": {
+      "post": {
+        "tags": ["Execução Service"],
+        "summary": "Inicia o reparo físico, consumindo a reserva de peças de forma atômica",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Reparo iniciado e ExecucaoIniciada.v1 emitido" },
+          "409": { "description": "Execução bloqueada por cancelamento (tombstone)" }
+        }
+      }
+    },
+    "/v1/execucoes/{id}/concluir": {
+      "post": {
+        "tags": ["Execução Service"],
+        "summary": "Conclui todas as tarefas do reparo e emite ExecucaoConcluida.v1",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Execução concluída e ExecucaoConcluida.v1 emitido" }
+        }
+      }
+    }
+  }
+}

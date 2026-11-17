@@ -2,11 +2,14 @@ from src.identidade.aplicacao.casos_de_uso import CriarUsuario
 from src.identidade.dominio.entidades import PerfilUsuario
 from src.identidade.infraestrutura.repositorios import UsuarioRepositorioImpl
 from src.identidade.infraestrutura.bcrypt_provider import BcryptHashProvider
+from src.shared.infraestrutura.unit_of_work import SQLAlchemyUnitOfWork
 
 
 def test_login_com_sucesso(client, db):
     hash_provider = BcryptHashProvider()
-    CriarUsuario(UsuarioRepositorioImpl(db), hash_provider).executar(
+    CriarUsuario(
+        UsuarioRepositorioImpl(db), hash_provider, uow=SQLAlchemyUnitOfWork(db)
+    ).executar(
         email="admin@oficina.com",
         senha="senha123",
         perfil=PerfilUsuario.ADMIN,
@@ -26,7 +29,9 @@ def test_login_com_sucesso(client, db):
 
 def test_login_com_senha_errada(client, db):
     hash_provider = BcryptHashProvider()
-    CriarUsuario(UsuarioRepositorioImpl(db), hash_provider).executar(
+    CriarUsuario(
+        UsuarioRepositorioImpl(db), hash_provider, uow=SQLAlchemyUnitOfWork(db)
+    ).executar(
         email="admin@oficina.com",
         senha="senha123",
         perfil=PerfilUsuario.ADMIN,

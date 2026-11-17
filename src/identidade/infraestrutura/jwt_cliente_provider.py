@@ -1,9 +1,10 @@
-import jwt
 from uuid import UUID
+
+import jwt
 
 from src.config import Configuracoes
 from src.identidade.aplicacao.ports import ProvedorToken
-from src.identidade.dominio.entidades import Principal, ActorType
+from src.identidade.dominio.entidades import ActorType, Principal
 
 
 class JwtTokenProviderCliente(ProvedorToken):
@@ -18,13 +19,17 @@ class JwtTokenProviderCliente(ProvedorToken):
 
     def decodificar(self, token: str) -> Principal:
         try:
+            header = jwt.get_unverified_header(token)
+            if header.get("alg") != "RS256":
+                raise ValueError("Algoritmo inesperado; apenas RS256 é permitido")
             signing_key = self.jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
-                audience="oficina-api",
-                issuer=["oficina-auth-serverless", "oficina-serverless"],
+                audience=self.config.jwt_audience,
+                issuer=self.config.jwt_client_issuer,
+                options={"require": ["sub", "exp", "iat", "iss", "aud", "actor_type"]},
             )
 
             actor = payload.get("actor_type")

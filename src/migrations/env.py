@@ -88,4 +88,4 @@ else:
 from src.identidade.infraestrutura.repositorios import UsuarioModel  # noqa: F401
 from src.catalogo.infraestrutura.repositorios import ServicoModel  # noqa: F401
 from src.estoque.infraestrutura.repositorios import PecaModel  # noqa: F401
-from src.shared.outbox import OutboxEventoModel  # noqa: F401
+from src.shared.outbox import InboxEventoModel, OutboxEventoModel  # noqa: F401
