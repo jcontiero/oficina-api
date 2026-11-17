@@ -37,7 +37,7 @@ COPY scripts/ ./scripts/
 COPY alembic.ini ./
 
 # Define permissões para o usuário não-root
-RUN chown -R appuser:appgroup /app
+RUN chown -R appuser:appgroup /app && chmod -R a+rX /app
 USER appuser
 
 # Expõe a porta padrão da aplicação
