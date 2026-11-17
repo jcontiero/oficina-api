@@ -16,13 +16,12 @@ Nenhum recurso de nuvem pode ser gerenciado por mais de um state Terraform. Recu
 - **Bucket:** `gs://fiap-project-514922-tfstate` (versionamento habilitado, `uniform_bucket_level_access = true`, `prevent_destroy = true`).
 - **Organização de prefixos:**
   - `bootstrap/` — APIs base do projeto, bucket de state e Workload Identity Federation.
-  - `platform/network-gke/` — VPC, subnets, Cloud NAT, Private Service Access, GKE, Artifact Registry (`oficina-docker`) e base do Datadog Agent.
-  - `platform/cloudsql/` — instância Cloud SQL PostgreSQL compartilhada (sem bancos lógicos de serviço).
-  - `platform/messaging/{homolog,prod}/` — tópicos Pub/Sub compartilhados (`oficina-{env}-eventos-v1`, `oficina-{env}-billing-comandos-v1`, `oficina-{env}-execucao-comandos-v1`) e respectivas DLQs centrais.
-  - `platform/gateway/{homolog,prod}/` — API Gateway compartilhado (configs, roteamento entre serviços e exposição pública).
-  - `services/oficina-api/{homolog,prod}/` — banco lógico `oficina_os_{env}`, usuário, subscriptions do OS/Saga, Cloud Functions de autenticação/notificação, endpoint/chaves JWKS, segredos e IAM do OS Service.
-  - `services/oficina-billing/{homolog,prod}/` — banco lógico `oficina_billing_{env}`, usuário, subscriptions do Billing, segredos do Billing/Mercado Pago e IAM do Billing Service.
-  - `services/oficina-execucao/{homolog,prod}/` — banco Firestore Native nomeado `oficina-execucao-{env}`, subscriptions da Execução, segredos e IAM do Execução Service.
+  - `platform/network-gke/` (`oficina-k8s-infra`) — VPC, subnets, Cloud NAT, Private Service Access, GKE, Artifact Registry (`oficina-docker`) e base do Datadog Agent.
+  - `platform/cloudsql/` (`oficina-database-infra`) — instância Cloud SQL PostgreSQL compartilhada (sem bancos lógicos de serviço).
+  - `services/oficina-serverless/{homolog,prod}/` (`oficina-serverless`) — Functions de autenticação/notificação, API Gateway, chaves/JWKS da autenticação de clientes e tópicos/DLQs centrais do Pub/Sub.
+  - `services/oficina-api/{homolog,prod}/` (`oficina-api`) — aplicação OS, orquestrador da Saga, emissão/JWKS administrativo (`/.well-known/admin-jwks.json`), banco lógico `oficina_os_{env}`, usuário, subscriptions do OS/Saga, segredos e IAM exclusivos.
+  - `services/oficina-billing/{homolog,prod}/` (`oficina-billing`) — banco lógico `oficina_billing_{env}`, usuário, subscriptions exclusivas do Billing, segredos do Billing/Mercado Pago e IAM exclusivo.
+  - `services/oficina-execucao/{homolog,prod}/` (`oficina-execucao`) — banco Firestore Native nomeado `oficina-execucao-{env}`, subscriptions exclusivas da Execução, segredos e IAM exclusivo.
 
 ---
 
@@ -30,19 +29,16 @@ Nenhum recurso de nuvem pode ser gerenciado por mais de um state Terraform. Recu
 
 | Recurso | Repositório Dono | State (`gs://fiap-project-514922-tfstate/...`) | Ambiente |
 |---|---|---|---|
-| APIs GCP, Bucket TFState, Workload Identity Pool/Provider, `github-actions-sa` | `oficina-api` (infra/bootstrap) | `bootstrap/` | Projeto (Global) |
-| VPC, Subnets, Cloud NAT, Private Service Access | `oficina-api` (infra/platform) | `platform/network-gke/` | Compartilhado |
-| Artifact Registry (`oficina-docker`, `us-east1`) | `oficina-api` (infra/platform) | `platform/network-gke/` | Compartilhado |
-| Cluster GKE e Datadog Agent (DaemonSet/Cluster Agent) | `oficina-api` (infra/platform) | `platform/network-gke/` | Compartilhado |
-| Instância Cloud SQL PostgreSQL 16 (privada) | `oficina-api` (infra/platform) | `platform/cloudsql/` | Compartilhado |
-| Tópicos Pub/Sub compartilhados e DLQs centrais | `oficina-api` (infra/platform) | `platform/messaging/{homolog,prod}/` | `homolog` / `prod` |
-| API Gateway (API, API Config e Gateway) | `oficina-api` (infra/platform) | `platform/gateway/{homolog,prod}/` | `homolog` / `prod` |
-| Database lógico `oficina_os_{env}`, usuário SQL, IAM OS, Subscriptions OS/Saga | `oficina-api` | `services/oficina-api/{homolog,prod}/` | `homolog` / `prod` |
-| Functions de autenticação/notificação e JWKS (`/.well-known/admin-jwks.json`, `client-jwks`) | `oficina-api` | `services/oficina-api/{homolog,prod}/` | `homolog` / `prod` |
+| APIs GCP, Bucket TFState, Workload Identity Pool/Provider, `github-actions-sa` | `oficina-k8s-infra` / bootstrap | `bootstrap/` | Projeto (Global) |
+| VPC, Subnets, Cloud NAT, Private Service Access | `oficina-k8s-infra` | `platform/network-gke/` | Compartilhado |
+| Artifact Registry (`oficina-docker`, `us-east1`), Cluster GKE e Datadog Agent | `oficina-k8s-infra` | `platform/network-gke/` | Compartilhado |
+| Instância Cloud SQL PostgreSQL 16 (privada) | `oficina-database-infra` | `platform/cloudsql/` | Compartilhado |
+| Functions de autenticação/notificação, API Gateway, JWKS de clientes e tópicos/DLQs centrais | `oficina-serverless` | `services/oficina-serverless/{homolog,prod}/` | `homolog` / `prod` |
+| Aplicação OS, Orquestrador, JWKS administrativo (`/.well-known/admin-jwks.json`), banco lógico `oficina_os_{env}`, subscriptions e IAM OS | `oficina-api` | `services/oficina-api/{homolog,prod}/` | `homolog` / `prod` |
 | Secret Manager OS (`SECRET_KEY`, `JWT_PRIVATE_KEY_PEM`, `DD_API_KEY`) | `oficina-api` | `services/oficina-api/{homolog,prod}/` | `homolog` / `prod` |
-| Database lógico `oficina_billing_{env}`, usuário SQL, IAM Billing, Subs Billing | `oficina-billing` | `services/oficina-billing/{homolog,prod}/` | `homolog` / `prod` |
+| Database lógico `oficina_billing_{env}`, usuário SQL, IAM e subscriptions exclusivas Billing | `oficina-billing` | `services/oficina-billing/{homolog,prod}/` | `homolog` / `prod` |
 | Secret Manager Billing (`MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `DD_API_KEY`) | `oficina-billing` | `services/oficina-billing/{homolog,prod}/` | `homolog` / `prod` |
-| Firestore Native (`oficina-execucao-{env}`), IAM Execução, Subs Execução | `oficina-execucao` | `services/oficina-execucao/{homolog,prod}/` | `homolog` / `prod` |
+| Firestore Native (`oficina-execucao-{env}`), IAM e subscriptions exclusivas Execução | `oficina-execucao` | `services/oficina-execucao/{homolog,prod}/` | `homolog` / `prod` |
 
 ---
 
@@ -100,12 +96,16 @@ O bucket `gs://fiap-project-514922-tfstate` precisa existir **antes** do `terraf
 
 ## 7. Ordem de Integração dos PRs Encadeados (Pré-Provisionamento)
 
-Nenhum PR deve ser mesclado com checks obrigatórios reprovados (incluindo os Quality Gates pendentes de `oficina-billing#4` e `oficina-execucao#4`). Após todos os gates verdes:
+Nenhum PR deve ser mesclado com checks obrigatórios reprovados (incluindo os Quality Gates pendentes de `oficina-billing#4` e `oficina-execucao#4`). Após integrar cada base, atualizar/rebasear o PR seguinte e reexecutar todos os checks no novo `HEAD`:
 
-1. **`oficina-billing` (cadeia P2 → P3 → P4 → P5 → P6):**
-   - Integrar em ordem crescente até `feat/p6-qualidade-seguranca-e-sonar` (`#1` → `#2` → `#3` → `#4`) na branch base (`main`/`homolog`), garantindo que o último SHA aprovado contenha os testes ADMIN e o gate do SonarCloud.
-2. **`oficina-execucao` (cadeia P2 → P3 → P4 → P5 → P6):**
-   - Integrar em ordem crescente até `feat/p6-qualidade-seguranca-e-sonar` (`#1` → `#2` → `#3` → `#4`), garantindo que o último SHA aprovado contenha o alinhamento da barreira e o gate do SonarCloud.
-3. **`oficina-api` (cadeia P3 → P4 → P5 → P6 → P7 docs):**
-   - Integrar em ordem crescente: P3 → P4 (`#16`) → P5 (`#17`) → P6 (`#18`, com `bdd-integrado` e `SonarCloud` verdes) → P7 planejamento (`#19`).
-4. **Próximo passo após os merges:** somente depois de concluída a integração e com todos os gates verdes, solicitar autorização explícita para iniciar o **bootstrap** de `fiap-project-514922` com o plano Terraform concreto revisado.
+1. **Infraestrutura e Serverless (P0/P3):**
+   - `oficina-k8s-infra`: PR `#6` (`chore/p0-datadog-and-state-ownership -> main`).
+   - `oficina-database-infra`: PR `#5` (`chore/p0-state-ownership-and-readme -> main`).
+   - `oficina-serverless`: PR `#5` (`chore/p0-env-parameterization-and-ci -> main`) $\rightarrow$ atualizar e validar `#6` (`feat/p3-auth-http-interno -> main`).
+2. **`oficina-api` (P0 → P7 docs):**
+   - Integrar sequencialmente: `#12` (P0) $\rightarrow$ `#13` (P1) $\rightarrow$ `#14` (P2) $\rightarrow$ `#15` (P3) $\rightarrow$ `#16` (P4) $\rightarrow$ `#17` (P5) $\rightarrow$ `#18` (P6) $\rightarrow$ `#19` (P7 docs), atualizando a base e reexecutando checks a cada passo.
+3. **`oficina-billing` (P3 → P6, após SonarCloud verde em `#4`):**
+   - Integrar sequencialmente: `#1` (P3) $\rightarrow$ `#2` (P4) $\rightarrow$ `#3` (P5) $\rightarrow$ `#4` (P6).
+4. **`oficina-execucao` (P3 → P6, após SonarCloud verde em `#4`):**
+   - Integrar sequencialmente: `#1` (P3) $\rightarrow$ `#2` (P4) $\rightarrow$ `#3` (P5) $\rightarrow$ `#4` (P6).
+5. **Próximo passo após os merges:** somente depois de concluída a integração e com todos os gates verdes, solicitar autorização explícita para iniciar o **bootstrap** de `fiap-project-514922` com o plano Terraform concreto revisado.
