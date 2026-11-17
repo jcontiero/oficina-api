@@ -51,6 +51,71 @@ jobs:
           TEST_DATABASE_URL: "sqlite:////tmp/oficina_ci_test.db"
           SECRET_KEY: ci-secret-key-para-testes-32-chars-ok
 
+  bdd-integrado:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    steps:
+      - name: Checkout oficina-api
+        uses: actions/checkout@v4
+        with:
+          path: oficina-api
+      - name: Checkout oficina-billing (SHA P6)
+        uses: actions/checkout@v4
+        with:
+          repository: jcontiero/oficina-billing
+          ref: 46e40e41635cad6b3fd2b3be6f6bba8dba990032
+          path: oficina-billing
+      - name: Checkout oficina-execucao (SHA P6)
+        uses: actions/checkout@v4
+        with:
+          repository: jcontiero/oficina-execucao
+          ref: 6deb3c3b10ab733cf73764521f5563887e541df6
+          path: oficina-execucao
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies (oficina-api)
+        working-directory: oficina-api
+        run: uv sync --all-extras
+      - name: Registrar manifesto de SHAs
+        working-directory: oficina-api
+        run: |
+          mkdir -p integration/relatorios
+          cat <<EOF > integration/relatorios/manifesto-shas.json
+          {
+            "oficina-api": "$(git rev-parse HEAD)",
+            "oficina-billing": "$(git -C ../oficina-billing rev-parse HEAD)",
+            "oficina-execucao": "$(git -C ../oficina-execucao rev-parse HEAD)"
+          }
+          EOF
+          cat integration/relatorios/manifesto-shas.json
+      - name: Subir stack integrada (3 APIs, 3 workers, Postgres, Firestore e Pub/Sub)
+        working-directory: oficina-api
+        run: docker compose -f integration/compose.yml up -d --build
+      - name: Executar BDD integrado (fluxo feliz + compensação/reinício)
+        working-directory: oficina-api
+        env:
+          RUN_LIVE_BDD: "1"
+          PYTHONPATH: "."
+        run: uv run pytest tests/bdd/test_p6_bdd_integrado.py -v --junitxml=integration/relatorios/bdd-junit.xml
+      - name: Coletar logs e encerrar stack
+        if: always()
+        working-directory: oficina-api
+        run: |
+          mkdir -p integration/relatorios
+          docker compose -f integration/compose.yml logs --no-color > integration/relatorios/docker-compose.log || true
+          docker compose -f integration/compose.yml down -v || true
+      - name: Publicar relatório, logs e manifesto de SHAs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bdd-integrado-relatorios
+          path: oficina-api/integration/relatorios/
+          retention-days: 14
+
   build-push-deploy:
     runs-on: ubuntu-latest
     needs: validate
