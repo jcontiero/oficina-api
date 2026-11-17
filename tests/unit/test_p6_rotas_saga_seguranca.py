@@ -30,6 +30,7 @@ def _setup_app(tmp_path):
     cfg = Configuracoes(
         database_url=db_url,
         environment="homolog",
+        allow_ephemeral_admin_jwt_key=True,
         dd_trace_enabled=False,
         enable_legacy_monolith_domains=False,
         secret_key="segredo-teste-p6-com-mais-de-32-bytes",
