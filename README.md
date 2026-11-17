@@ -27,7 +27,7 @@ Este repositório contém o serviço principal de **Ordens de Serviço (OS Servi
 | `DATABASE_URL` | URL SQLAlchemy do banco de dados | `postgresql+pg8000://user:pass@localhost:5432/oficina` |
 | `SECRET_KEY` | Chave para assinatura de tokens internos (mín. 32 chars) | `default-secret-key-for-dev-and-tests-min-32-chars` |
 | `JWKS_URL` | Endpoint JWKS público para validação de JWT de clientes | `https://oficina-gateway-dkvx20rp.ue.gateway.dev/.well-known/jwks.json` |
-| `GCP_PROJECT_ID` | Projeto GCP para publicação no Pub/Sub | `pos-fiap-2026` |
+| `GCP_PROJECT_ID` | Projeto GCP para publicação no Pub/Sub | `fiap-project-514922` |
 | `PUBSUB_TOPIC_ID` | Tópico Pub/Sub consumido a partir da Outbox | `oficina-notificacoes-topic` |
 
 ## Passos para Execução, Testes e Deploy
