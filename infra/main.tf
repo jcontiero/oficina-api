@@ -118,7 +118,7 @@ resource "google_secret_manager_secret" "database_url" {
 
 resource "google_secret_manager_secret_version" "database_url" {
   secret      = google_secret_manager_secret.database_url.id
-  secret_data = "postgresql://${google_sql_user.os_user.name}:${random_password.os_db_password.result}@${data.terraform_remote_state.cloudsql.outputs.cloud_sql_private_ip}:5432/${google_sql_database.os_db.name}"
+  secret_data = "postgresql+pg8000://${google_sql_user.os_user.name}:${random_password.os_db_password.result}@${data.terraform_remote_state.cloudsql.outputs.cloud_sql_private_ip}:5432/${google_sql_database.os_db.name}"
 }
 
 resource "google_secret_manager_secret_iam_member" "database_url_access" {
