@@ -27,6 +27,14 @@ class JwtTokenProvider(ProvedorToken):
     def __init__(self, configuracoes: Configuracoes):
         self.config = configuracoes
         self.key_id = configuracoes.admin_jwt_key_id
+        if (
+            configuracoes.environment.lower() in {"homolog", "prod", "production"}
+            and not configuracoes.admin_jwt_private_key_pem.strip()
+            and not configuracoes.allow_ephemeral_admin_jwt_key
+        ):
+            raise ValueError(
+                "ADMIN_JWT_PRIVATE_KEY_PEM obrigatório em ambientes homolog/production"
+            )
         self.private_key = _carregar_ou_gerar_chave_privada(
             configuracoes.admin_jwt_private_key_pem
         )
