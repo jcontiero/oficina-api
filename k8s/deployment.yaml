@@ -22,7 +22,7 @@ spec:
         app: oficina-api
         tags.datadoghq.com/service: oficina-api
     spec:
-      automountServiceAccountToken: false
+      serviceAccountName: oficina-api-sa
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -30,7 +30,7 @@ spec:
       containers:
         - name: api
           image: us-east1-docker.pkg.dev/fiap-project-514922/oficina-docker/oficina-api:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8000
@@ -46,14 +46,16 @@ spec:
                   fieldPath: metadata.namespace
             - name: DD_SERVICE
               value: "oficina-api"
-            - name: DD_VERSION
-              value: "latest"
             - name: DD_AGENT_HOST
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
             - name: DD_TRACE_AGENT_PORT
               value: "8126"
+          volumeMounts:
+            - name: secrets-store
+              mountPath: /mnt/secrets-store
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -80,3 +82,10 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 2
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: oficina-api-secrets

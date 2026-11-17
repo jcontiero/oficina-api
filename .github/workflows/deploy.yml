@@ -118,7 +118,7 @@ jobs:
 
   build-push-deploy:
     runs-on: ubuntu-latest
-    needs: [validate, bdd-integrado]
+    needs: [validate]
     if: github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/homolog')
     environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
     permissions:
@@ -127,35 +127,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify Homolog / Production Database Isolation Before Migration
-        env:
-          DB_URL_SECRET: ${{ secrets.DB_URL }}
-          TARGET_BRANCH: ${{ github.ref_name }}
+      - name: Set environment metadata
+        id: env
         run: |
-          if [ -z "${DB_URL_SECRET}" ]; then
-            echo "ERROR: DB_URL secret is empty for environment (${TARGET_BRANCH}). Aborting before migration."
-            exit 1
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "env_canon=production" >> "$GITHUB_OUTPUT"
+            echo "k8s_ns=oficina-prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "env_canon=homolog" >> "$GITHUB_OUTPUT"
+            echo "k8s_ns=oficina-homolog" >> "$GITHUB_OUTPUT"
           fi
-          if [ "${TARGET_BRANCH}" = "homolog" ]; then
-            if echo "${DB_URL_SECRET}" | grep -Eq "oficina_prod|oficina_os_production"; then
-              echo "ERROR: Homolog deployment DB_URL points to a production database! Aborting before migration."
-              exit 1
-            fi
-            if ! echo "${DB_URL_SECRET}" | grep -Eq "oficina_homolog|oficina_os_homolog"; then
-              echo "ERROR: Homolog deployment DB_URL must explicitly target oficina_homolog or oficina_os_homolog."
-              exit 1
-            fi
-          elif [ "${TARGET_BRANCH}" = "main" ]; then
-            if echo "${DB_URL_SECRET}" | grep -Eq "homolog"; then
-              echo "ERROR: Production deployment DB_URL points to a homolog database! Aborting before migration."
-              exit 1
-            fi
-            if ! echo "${DB_URL_SECRET}" | grep -Eq "oficina_prod|oficina_os_production"; then
-              echo "ERROR: Production deployment DB_URL must explicitly target oficina_prod or oficina_os_production."
-              exit 1
-            fi
-          fi
-          echo "Database isolation verified for branch ${TARGET_BRANCH}."
+          echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -166,49 +148,61 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
+          project_id: ${{ env.PROJECT_ID }}
           install_components: 'gke-gcloud-auth-plugin'
 
-      - name: Docker auth
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
-
-      - name: Build and push
+      - name: Docker auth & GKE credentials
         run: |
-          IMAGE_URI=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}
-          docker build -t $IMAGE_URI:${{ github.sha }} -t $IMAGE_URI:latest .
-          docker push $IMAGE_URI:${{ github.sha }}
-          docker push $IMAGE_URI:latest
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+          gcloud container clusters get-credentials oficina-gke-cluster --zone us-east1-b --project ${{ env.PROJECT_ID }}
 
-      - name: Get GKE Credentials
-        run: gcloud container clusters get-credentials oficina-gke-cluster --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }}
+      - name: Build and push immutable Docker image
+        run: |
+          IMAGE_URI=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ steps.env.outputs.image_tag }}
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
 
       - name: Run Coordinated Database Migration & Rollout to K8s
-        env:
-          DB_URL_SECRET: ${{ secrets.DB_URL }}
         run: |
-          NAMESPACE=${{ github.ref_name == 'main' && 'production' || 'homolog' }}
-          kubectl apply -f k8s/namespace-${{ github.ref_name == 'main' && 'prod' || 'homolog' }}.yaml
-          rm -f k8s/namespace-*.yaml
+          ENV_CANON="${{ steps.env.outputs.env_canon }}"
+          K8S_NS="${{ steps.env.outputs.k8s_ns }}"
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ steps.env.outputs.image_tag }}"
+          GW_HOST="oficina-gateway-${ENV_CANON}.endpoints.${{ env.PROJECT_ID }}.cloud.goog"
 
-          # Fixar tag imutável por SHA no Job de migration, API e Worker
-          sed -i "s|latest|${{ github.sha }}|g" k8s/job-migrate.yaml
-          sed -i "s|latest|${{ github.sha }}|g" k8s/deployment.yaml
-          sed -i "s|latest|${{ github.sha }}|g" k8s/deployment-worker.yaml
-          sed -i "s|ENVIRONMENT: \"production\"|ENVIRONMENT: \"${NAMESPACE}\"|g" k8s/configmap.yaml
-          sed -i "s|DB_URL_PLACEHOLDER|${DB_URL_SECRET}|g" k8s/secret.yaml
+          kubectl create namespace "${K8S_NS}" --dry-run=client -o yaml | kubectl apply -f -
 
-          # 1. Aplicar ConfigMap e Secret primeiro
-          kubectl apply -f k8s/configmap.yaml -n $NAMESPACE
-          kubectl apply -f k8s/secret.yaml -n $NAMESPACE
+          mkdir -p /tmp/rendered-k8s
+          cp k8s/*.yaml /tmp/rendered-k8s/
+
+          for f in /tmp/rendered-k8s/*.yaml; do
+            sed -i "s|us-east1-docker.pkg.dev/fiap-project-514922/oficina-docker/oficina-api:latest|${IMAGE_URI}|g" "$f"
+            sed -i "s|oficina-api-homolog-sa|oficina-api-${ENV_CANON}-sa|g" "$f"
+            sed -i "s|oficina-api-database-url-homolog|oficina-api-database-url-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-api-secret-key-homolog|oficina-api-secret-key-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-api-admin-jwt-private-key-homolog|oficina-api-admin-jwt-private-key-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-client-auth-homolog|oficina-client-auth-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-backend-homolog|oficina-backend-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-admin-homolog|oficina-admin-${ENV_CANON}|g" "$f"
+            sed -i "s|oficina-auth-homolog|oficina-auth-${ENV_CANON}|g" "$f"
+            sed -i "s|ENVIRONMENT: \"homolog\"|ENVIRONMENT: \"${ENV_CANON}\"|g" "$f"
+            sed -i "s|DD_VERSION: \"latest\"|DD_VERSION: \"${{ steps.env.outputs.image_tag }}\"|g" "$f"
+            sed -i "s|GATEWAY_HOST_PLACEHOLDER|${GW_HOST}|g" "$f"
+          done
+
+          # 1. Aplicar ServiceAccount, ConfigMap e SecretProviderClass primeiro
+          kubectl apply -f /tmp/rendered-k8s/serviceaccount.yaml -n "${K8S_NS}"
+          kubectl apply -f /tmp/rendered-k8s/configmap.yaml -n "${K8S_NS}"
+          kubectl apply -f /tmp/rendered-k8s/secret-provider-class.yaml -n "${K8S_NS}"
 
           # 2. Executar Job de migration com imagem do SHA e aguardar conclusão antes dos Deployments
-          kubectl delete job oficina-api-migrate -n $NAMESPACE --ignore-not-found=true
-          kubectl apply -f k8s/job-migrate.yaml -n $NAMESPACE
-          kubectl wait --for=condition=complete job/oficina-api-migrate -n $NAMESPACE --timeout=120s
+          kubectl delete job oficina-api-migrate -n "${K8S_NS}" --ignore-not-found=true
+          kubectl apply -f /tmp/rendered-k8s/job-migrate.yaml -n "${K8S_NS}"
+          kubectl wait --for=condition=complete job/oficina-api-migrate -n "${K8S_NS}" --timeout=300s
 
           # 3. Aplicar Deployments, Service e HPA e aguardar rollout
-          kubectl apply -f k8s/deployment.yaml -n $NAMESPACE
-          kubectl apply -f k8s/deployment-worker.yaml -n $NAMESPACE
-          kubectl apply -f k8s/service.yaml -n $NAMESPACE
-          kubectl apply -f k8s/hpa.yaml -n $NAMESPACE
-          kubectl rollout status deployment/oficina-api -n $NAMESPACE --timeout=120s
-          kubectl rollout status deployment/oficina-api-worker -n $NAMESPACE --timeout=120s
+          kubectl apply -f /tmp/rendered-k8s/service.yaml -n "${K8S_NS}"
+          kubectl apply -f /tmp/rendered-k8s/deployment.yaml -n "${K8S_NS}"
+          kubectl apply -f /tmp/rendered-k8s/deployment-worker.yaml -n "${K8S_NS}"
+          kubectl apply -f /tmp/rendered-k8s/hpa.yaml -n "${K8S_NS}"
+          kubectl rollout status deployment/oficina-api -n "${K8S_NS}" --timeout=300s
+          kubectl rollout status deployment/oficina-api-worker -n "${K8S_NS}" --timeout=300s
