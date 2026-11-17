@@ -32,14 +32,20 @@ spec:
         - name: api
           image: us-east1-docker.pkg.dev/fiap-project-514922/oficina-docker/oficina-api:latest
           imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - |
+              export DATABASE_URL=$(cat /mnt/secrets-store/database-url)
+              export SECRET_KEY=$(cat /mnt/secrets-store/secret-key)
+              export ADMIN_JWT_PRIVATE_KEY_PEM=$(cat /mnt/secrets-store/admin-jwt-private-key-pem)
+              exec uvicorn src.main:app --host 0.0.0.0 --port 8000
           ports:
             - name: http
               containerPort: 8000
           envFrom:
             - configMapRef:
                 name: oficina-api-config
-            - secretRef:
-                name: oficina-api-secret
           env:
             - name: DD_ENV
               valueFrom:
