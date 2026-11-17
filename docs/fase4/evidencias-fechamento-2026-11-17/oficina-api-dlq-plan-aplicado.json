@@ -1,0 +1,8 @@
+[
+  {
+    "address": "google_pubsub_subscription_iam_member.dead_letter_forwarder",
+    "actions": [
+      "create"
+    ]
+  }
+]

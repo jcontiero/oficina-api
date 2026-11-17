@@ -1,0 +1,70 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: oficina-homolog-cert
+  namespace: oficina-homolog
+spec:
+  domains:
+  - 8.233.80.186.sslip.io
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oficina-homolog-ingress
+  namespace: oficina-homolog
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: oficina-homolog-ingress-ip
+    networking.gke.io/managed-certificates: oficina-homolog-cert
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /v1/pagamentos
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-billing-service
+            port:
+              number: 80
+      - path: /v1/orcamentos
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-billing-service
+            port:
+              number: 80
+      - path: /webhooks/mercadopago
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-billing-service
+            port:
+              number: 80
+      - path: /v1/execucoes
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-execucao-service
+            port:
+              number: 80
+      - path: /v1/pecas
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-execucao-service
+            port:
+              number: 80
+      - path: /v1/servicos
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-execucao-service
+            port:
+              number: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: oficina-api-service
+            port:
+              number: 80

@@ -1,0 +1,22 @@
+[
+  {
+    "repositorio": "oficina-api",
+    "testes_aprovados": 220,
+    "cobertura": 88.62
+  },
+  {
+    "repositorio": "oficina-billing",
+    "testes_aprovados": 23,
+    "cobertura": 86.25
+  },
+  {
+    "repositorio": "oficina-execucao",
+    "testes_aprovados": 66,
+    "cobertura": 86.17
+  },
+  {
+    "repositorio": "oficina-serverless",
+    "testes_aprovados": 28,
+    "cobertura": 97.66
+  }
+]

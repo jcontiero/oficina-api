@@ -149,7 +149,7 @@ services:
       DD_TRACE_ENABLED: "false"
       MP_WEBHOOK_SECRET: local-mp-webhook-secret
       MP_PROVIDER_MODE: fake
-      MP_FAKE_STATE_FILE: /shared-mp/orders.json
+      MP_FAKE_SHARED_DATABASE: "true"
     ports:
       - "8001:8000"
     volumes:
@@ -185,7 +185,7 @@ services:
       DD_TRACE_ENABLED: "false"
       MP_WEBHOOK_SECRET: local-mp-webhook-secret
       MP_PROVIDER_MODE: fake
-      MP_FAKE_STATE_FILE: /shared-mp/orders.json
+      MP_FAKE_SHARED_DATABASE: "true"
     volumes:
       - mp_fake_state:/shared-mp
     user: "0:0"
