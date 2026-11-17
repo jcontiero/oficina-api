@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jcontiero/oficina-billing
-          ref: 7b766b4bf4f1d81ca92f605848701a1db6596886
+          ref: 09747e075c5ff56ce0524a135d199cccda6858d5
           path: oficina-billing
       - name: Checkout oficina-execucao (SHA P6)
         uses: actions/checkout@v4
