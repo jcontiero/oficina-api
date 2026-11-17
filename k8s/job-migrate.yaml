@@ -14,6 +14,7 @@ spec:
         app: oficina-api
         component: migration
     spec:
+      serviceAccountName: oficina-api-sa
       automountServiceAccountToken: false
       restartPolicy: OnFailure
       securityContext:
@@ -29,6 +30,10 @@ spec:
                 name: oficina-api-config
             - secretRef:
                 name: oficina-api-secret
+          volumeMounts:
+            - name: secrets-store
+              mountPath: /mnt/secrets-store
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -39,3 +44,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: oficina-api-secrets

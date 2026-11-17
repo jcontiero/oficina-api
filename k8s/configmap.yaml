@@ -5,7 +5,16 @@ metadata:
   labels:
     app: oficina-api
 data:
-  ENVIRONMENT: "production"
+  ENVIRONMENT: "homolog"
+  GCP_PROJECT_ID: "fiap-project-514922"
   LOG_LEVEL: "INFO"
   PORT: "8000"
-  JWKS_URL: "https://oficina-gateway-dkvx20rp.ue.gateway.dev/.well-known/jwks.json"
+  JWT_AUDIENCE: "oficina-backend-homolog"
+  JWT_ADMIN_ISSUER: "oficina-admin-homolog"
+  JWT_CLIENT_ISSUER: "oficina-auth-homolog"
+  JWKS_URL: "https://GATEWAY_HOST_PLACEHOLDER/.well-known/jwks.json"
+  INTERNAL_AUTH_AUDIENCE: "https://api.oficina.internal/internal/clientes/autenticacao"
+  INTERNAL_AUTH_ALLOWED_SERVICE_ACCOUNTS: "oficina-client-auth-homolog@fiap-project-514922.iam.gserviceaccount.com"
+  ENABLE_LEGACY_MONOLITH_DOMAINS: "true"
+  DD_TRACE_ENABLED: "true"
+  DD_VERSION: "latest"
