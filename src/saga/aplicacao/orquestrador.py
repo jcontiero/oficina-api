@@ -425,6 +425,14 @@ class OrquestradorSaga:
             motivo = (
                 saga.motivo_compensacao or MotivoCompensacao.FALHA_ENFILEIRAMENTO.value
             )
+            esperados = ["RESERVA"]
+            if saga.orcamento_id:
+                esperados.append("ORCAMENTO")
+            if saga.pagamento_id:
+                esperados.append("ESTORNO")
+            saga.efeitos_esperados_json = esperados
+            saga.efeitos_confirmados_json = []
+
             self._enfileirar_comando(
                 saga=saga,
                 destino="execucao",
@@ -484,9 +492,190 @@ class OrquestradorSaga:
             self._registrar_status_os(os_model, StatusOS.COMPENSACAO_PENDENTE)
             self._transicionar_saga(saga, EstadoSaga.INTERVENCAO_MANUAL)
 
+        elif (
+            evt
+            in {"ReservaLiberada.v1", "OrcamentoCancelado.v1", "PagamentoEstornado.v1"}
+            and estado == EstadoSaga.COMPENSANDO_EFEITOS
+        ):
+            efeito_map = {
+                "ReservaLiberada.v1": "RESERVA",
+                "OrcamentoCancelado.v1": "ORCAMENTO",
+                "PagamentoEstornado.v1": "ESTORNO",
+            }
+            efeito = efeito_map[evt]
+            confirmados = list(saga.efeitos_confirmados_json or [])
+            if efeito not in confirmados:
+                confirmados.append(efeito)
+            saga.efeitos_confirmados_json = confirmados
+            if efeito == "ESTORNO":
+                saga.compensacao_financeira_status = "CONCLUIDA"
+
+            esperados = list(saga.efeitos_esperados_json or [])
+            saga.version += 1
+            saga.atualizada_em = datetime.now(timezone.utc)
+            if esperados and set(esperados).issubset(set(confirmados)):
+                saga.subestado_compensacao = SubestadoCompensacao.FINALIZADA.value
+                self._registrar_status_os(os_model, StatusOS.CANCELADA)
+                self._transicionar_saga(saga, EstadoSaga.COMPENSADA)
+
+        elif (
+            evt == "PagamentoEstornoFalhou.v1"
+            and estado == EstadoSaga.COMPENSANDO_EFEITOS
+        ):
+            saga.compensacao_financeira_status = "FALHA_PENDENTE"
+            saga.version += 1
+            saga.atualizada_em = datetime.now(timezone.utc)
+
+        elif evt == "PagamentoConfirmado.v1" and estado in {
+            EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO,
+            EstadoSaga.COMPENSANDO_EFEITOS,
+            EstadoSaga.COMPENSADA,
+            EstadoSaga.RECUSADA,
+            EstadoSaga.INTERVENCAO_MANUAL,
+        }:
+            # Pagamento confirmado tardiamente: nunca iniciar execução; estornar após barreira
+            saga.pagamento_id = str(payload["pagamento_id"])
+            saga.total_centavos = int(
+                payload.get("total_centavos") or saga.total_centavos or 1
+            )
+            saga.compensacao_financeira_status = "PENDENTE"
+            if saga.execucao_cancelada_event_id:
+                if estado == EstadoSaga.COMPENSANDO_EFEITOS:
+                    esperados = list(saga.efeitos_esperados_json or [])
+                    if "ESTORNO" not in esperados:
+                        esperados.append("ESTORNO")
+                        saga.efeitos_esperados_json = esperados
+                self._enfileirar_comando(
+                    saga=saga,
+                    destino="billing",
+                    event_type="EstornarPagamento.v1",
+                    causation_id=envelope.event_id,
+                    payload={
+                        "rodada": saga.rodada,
+                        "compensacao_id": saga.compensacao_id or str(uuid4()),
+                        "motivo": MotivoCompensacao.PAGAMENTO_TARDIO.value,
+                        "pagamento_id": saga.pagamento_id,
+                        "total_centavos": int(saga.total_centavos or 1),
+                        "moeda": "BRL",
+                        "execucao_cancelada_event_id": saga.execucao_cancelada_event_id,
+                    },
+                    traceparent=traceparent,
+                )
+            elif estado == EstadoSaga.RECUSADA:
+                comp_id = uuid4()
+                saga.compensacao_id = str(comp_id)
+                saga.motivo_compensacao = MotivoCompensacao.PAGAMENTO_TARDIO.value
+                saga.subestado_compensacao = (
+                    SubestadoCompensacao.AGUARDANDO_BARREIRA_EXECUCAO.value
+                )
+                self._registrar_status_os(os_model, StatusOS.COMPENSACAO_PENDENTE)
+                self._transicionar_saga(saga, EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO)
+                self._enfileirar_comando(
+                    saga=saga,
+                    destino="execucao",
+                    event_type="CancelarExecucao.v1",
+                    causation_id=envelope.event_id,
+                    payload={
+                        "rodada": saga.rodada,
+                        "compensacao_id": str(comp_id),
+                        "motivo": saga.motivo_compensacao,
+                        "execucao_id": None,
+                    },
+                    traceparent=traceparent,
+                )
+
         else:
             self.db.commit()
             return "IGNORADO_PRECONDICAO"
 
         self.db.commit()
         return "PROCESSADO"
+
+    def solicitar_cancelamento(
+        self,
+        *,
+        os_id: UUID,
+        motivo: str = MotivoCompensacao.CANCELAMENTO_CLIENTE.value,
+        traceparent: str | None = None,
+    ) -> SagaInstanceModel:
+        saga = (
+            self.db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.os_id == str(os_id))
+            .order_by(SagaInstanceModel.rodada.desc())
+            .first()
+        )
+        if saga is None:
+            raise ValueError("Saga não encontrada para a OS")
+        os_model = (
+            self.db.query(OrdemDeServicoModel)
+            .filter(OrdemDeServicoModel.id == os_id)
+            .first()
+        )
+        if os_model is None:
+            raise ValueError("OS não encontrada")
+
+        comp_id = uuid4()
+        saga.compensacao_id = str(comp_id)
+        saga.motivo_compensacao = motivo
+        saga.subestado_compensacao = (
+            SubestadoCompensacao.AGUARDANDO_BARREIRA_EXECUCAO.value
+        )
+        self._registrar_status_os(os_model, StatusOS.COMPENSACAO_PENDENTE, origem="API")
+        self._transicionar_saga(saga, EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO)
+        self._enfileirar_comando(
+            saga=saga,
+            destino="execucao",
+            event_type="CancelarExecucao.v1",
+            causation_id=UUID(saga.id),
+            payload={
+                "rodada": saga.rodada,
+                "compensacao_id": str(comp_id),
+                "motivo": motivo,
+                "execucao_id": None,
+            },
+            traceparent=traceparent,
+        )
+        self.db.commit()
+        return saga
+
+    def reprocessar_estorno(
+        self,
+        *,
+        os_id: UUID,
+        traceparent: str | None = None,
+    ) -> SagaInstanceModel:
+        saga = (
+            self.db.query(SagaInstanceModel)
+            .filter(SagaInstanceModel.os_id == str(os_id))
+            .order_by(SagaInstanceModel.rodada.desc())
+            .first()
+        )
+        if saga is None:
+            raise ValueError("Saga não encontrada para a OS")
+        if (
+            saga.compensacao_financeira_status != "FALHA_PENDENTE"
+            or not saga.execucao_cancelada_event_id
+            or not saga.pagamento_id
+        ):
+            raise ValueError("Saga não possui estorno pendente de reprocessamento")
+
+        saga.compensacao_financeira_status = "PENDENTE"
+        self._enfileirar_comando(
+            saga=saga,
+            destino="billing",
+            event_type="EstornarPagamento.v1",
+            causation_id=UUID(saga.id),
+            payload={
+                "rodada": saga.rodada,
+                "compensacao_id": saga.compensacao_id or str(uuid4()),
+                "motivo": saga.motivo_compensacao
+                or MotivoCompensacao.FALHA_ENFILEIRAMENTO.value,
+                "pagamento_id": saga.pagamento_id,
+                "total_centavos": int(saga.total_centavos or 1),
+                "moeda": "BRL",
+                "execucao_cancelada_event_id": saga.execucao_cancelada_event_id,
+            },
+            traceparent=traceparent,
+        )
+        self.db.commit()
+        return saga

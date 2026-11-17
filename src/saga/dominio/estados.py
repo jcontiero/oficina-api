@@ -42,6 +42,8 @@ class MotivoCompensacao(str, Enum):
     ESTOQUE_INSUFICIENTE = "ESTOQUE_INSUFICIENTE"
     TIMEOUT_DIAGNOSTICO = "TIMEOUT_DIAGNOSTICO"
     TIMEOUT_ORCAMENTO = "TIMEOUT_ORCAMENTO"
+    PAGAMENTO_TARDIO = "PAGAMENTO_TARDIO"
+    CANCELAMENTO_CLIENTE = "CANCELAMENTO_CLIENTE"
 
 
 TRANSICOES_SAGA_VALIDAS: dict[EstadoSaga, list[EstadoSaga]] = {
@@ -92,7 +94,9 @@ TRANSICOES_SAGA_VALIDAS: dict[EstadoSaga, list[EstadoSaga]] = {
         EstadoSaga.INTERVENCAO_MANUAL,
     ],
     EstadoSaga.CONCLUIDA: [],
-    EstadoSaga.RECUSADA: [],
+    EstadoSaga.RECUSADA: [
+        EstadoSaga.COMPENSANDO_BLOQUEIO_EXECUCAO,
+    ],
     EstadoSaga.COMPENSADA: [],
     EstadoSaga.INTERVENCAO_MANUAL: [
         EstadoSaga.COMPENSANDO_EFEITOS,
