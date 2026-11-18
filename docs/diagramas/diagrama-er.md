@@ -1,5 +1,7 @@
 # Modelo Entidade-Relacionamento e Justificativa
 
+> Registro histórico anterior à divisão em microsserviços da Fase 4. Não representa a topologia atual de homologação. Consulte os ADRs [014](../adr/ADR-014-divisao-microsservicos-fase4.md), [015](../adr/ADR-015-bancos-por-servico-sql-nosql.md) e [016](../adr/ADR-016-saga-orquestrada-e-compensacoes.md) para os limites e bancos atuais.
+
 ## 1. Escolha do Banco de Dados
 A escolha recaiu sobre o **PostgreSQL Gerenciado (Cloud SQL)**.
 * **Justificativa Técnica**: O PostgreSQL possui suporte avançado a consistência ACID, bloqueios de linha (`SELECT FOR UPDATE`), além de tipos complexos como `JSONB` e `UUID` nativos. Para o módulo de controle de **Estoque** e **Outbox Pattern**, a concorrência exige suporte robusto a transações e isolamento, minimizando deadlocks que ocorrem com frequência em bancos não relacionais ou ISAMs antigos. Além disso, o suporte ao uso de chaves assimétricas em queries futuras suportou essa escolha.

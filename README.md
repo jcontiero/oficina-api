@@ -8,7 +8,7 @@
 
 Este repositório contém o serviço principal de **Ordens de Serviço (OS Service)** da Oficina Mecânica, responsável pela gestão de clientes, veículos, abertura e acompanhamento de OS, e orquestração transacional com *Unit of Work* e *Transactional Outbox*.
 
-> Consulte o relatório de baseline da Fase 4 em [`docs/fase4/baseline.md`](docs/fase4/baseline.md).
+> Consulte a [documentação técnica](docs/README.md) para a arquitetura e os contratos.
 
 ## Tecnologias Utilizadas
 
