@@ -1,1 +1,0 @@
-{"mp_provider_mode": "fake", "mp_fake_state_file": "", "client_jwks_url": "http://localhost:8080/.well-known/jwks.json", "admin_jwks_url": "http://oficina-api-service/.well-known/admin-jwks.json"}

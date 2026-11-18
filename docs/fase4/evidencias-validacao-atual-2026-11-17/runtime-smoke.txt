@@ -1,4 +1,0 @@
-HEALTH oficina-api-service {"status": "ready", "database": "connected"}
-HEALTH oficina-billing-service {"status": "ready", "service": "oficina-billing", "database": "connected"}
-HEALTH oficina-execucao-service {"status": "ready", "service": "oficina-execucao", "firestore": "connected", "database": "oficina-execucao-homolog"}
-OS_LEGACY_ROUTES ["/servicos", "/servicos/{id}", "/pecas", "/pecas/codigo/{codigo}", "/pecas/{id}", "/pecas/{id}/repor-estoque"]
