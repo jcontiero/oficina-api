@@ -82,7 +82,7 @@ flowchart TD
 
 - **Swagger UI:** `/docs`
 - **Health Checks:** `/health/live` (liveness) e `/health/ready` (readiness com verificação SQL)
-- **Coleção Postman:** [`docs/collection-postman.json`](docs/collection-postman.json)
+- **Contratos HTTP OpenAPI:** [`docs/contratos/openapi-fase4-contratos-v1.json`](docs/contratos/openapi-fase4-contratos-v1.json)
 
 ## Repositórios Relacionados
 

@@ -14,10 +14,8 @@ A aplicação foi dividida em três microsserviços: OS e orquestração da Saga
 
 ## Operação e qualidade
 
-- [Deploy healthcheck e rollback](runbook-deploy-rollback.md).
+- [Infraestrutura e instruções de implantação](https://github.com/jcontiero/oficina-k8s-infra).
 - [Cobertura e evidências de testes](relatorios/relatorio-cobertura-testes.md).
-- [Portabilidade de nuvem](portabilidade-cloud.md).
-- [Collection Postman](collection-postman.json), com exemplos que devem ser conferidos contra o OpenAPI do serviço correspondente.
 
 
 ## Organização
