@@ -1,0 +1,103 @@
+[
+  {
+    "name": "Oficina homolog — API indisponível ou coletor sem dados",
+    "type": "metric alert",
+    "query": "avg(last_5m):avg:oficina.health.ready{env:homolog} by {service} < 1",
+    "message": "Healthcheck de readiness falhou ou deixou de chegar. Verifique API, banco, pods e o Job oficina-observabilidade em oficina-homolog.",
+    "tags": [
+      "project:oficina",
+      "env:homolog",
+      "managed_by:oficina"
+    ],
+    "options": {
+      "thresholds": {
+        "critical": 1
+      },
+      "include_tags": true,
+      "notify_audit": false,
+      "require_full_window": false,
+      "notify_no_data": true,
+      "no_data_timeframe": 5
+    }
+  },
+  {
+    "name": "Oficina homolog — Falhas de publicação na Outbox",
+    "type": "metric alert",
+    "query": "max(last_5m):max:oficina.outbox.falhas_agendadas{env:homolog} > 0",
+    "message": "Há eventos de OS com falha e retry agendado. Verifique worker, Pub/Sub e DLQ. Não confirme mensagens antes do commit.",
+    "tags": [
+      "project:oficina",
+      "env:homolog",
+      "managed_by:oficina"
+    ],
+    "options": {
+      "thresholds": {
+        "critical": 0
+      },
+      "include_tags": true,
+      "notify_audit": false,
+      "require_full_window": false,
+      "notify_no_data": false
+    }
+  },
+  {
+    "name": "Oficina homolog — Saga exige intervenção manual",
+    "type": "metric alert",
+    "query": "max(last_5m):max:oficina.saga.intervencao_manual{env:homolog} > 0",
+    "message": "Uma Saga exige intervenção manual. Consulte sua razão e estado persistidos antes de reprocessar compensações.",
+    "tags": [
+      "project:oficina",
+      "env:homolog",
+      "managed_by:oficina"
+    ],
+    "options": {
+      "thresholds": {
+        "critical": 0
+      },
+      "include_tags": true,
+      "notify_audit": false,
+      "require_full_window": false,
+      "notify_no_data": false
+    }
+  },
+  {
+    "name": "Oficina homolog — Compensação financeira pendente",
+    "type": "metric alert",
+    "query": "max(last_5m):max:oficina.saga.falha_financeira_pendente{env:homolog} > 0",
+    "message": "Há estorno com falha pendente. Verifique Mercado Pago e reconciliação, preservando a chave de idempotência.",
+    "tags": [
+      "project:oficina",
+      "env:homolog",
+      "managed_by:oficina"
+    ],
+    "options": {
+      "thresholds": {
+        "critical": 0
+      },
+      "include_tags": true,
+      "notify_audit": false,
+      "require_full_window": false,
+      "notify_no_data": false
+    }
+  },
+  {
+    "name": "Oficina homolog — Erros nas integrações e workers",
+    "type": "log alert",
+    "query": "logs(\"env:homolog (service:oficina-api* OR service:oficina-billing* OR service:oficina-execucao*) (status:error OR @level:ERROR OR @level:CRITICAL)\").index(\"*\").rollup(\"count\").last(\"5m\") > 0",
+    "message": "Erros encontrados nas APIs ou workers. Filtre os logs por service, saga_id, os_id e event_id para localizar o fluxo afetado.",
+    "tags": [
+      "project:oficina",
+      "env:homolog",
+      "managed_by:oficina"
+    ],
+    "options": {
+      "thresholds": {
+        "critical": 0
+      },
+      "include_tags": true,
+      "notify_audit": false,
+      "require_full_window": false,
+      "notify_no_data": false
+    }
+  }
+]

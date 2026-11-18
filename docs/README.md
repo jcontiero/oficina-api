@@ -14,6 +14,8 @@ A aplicação foi dividida em três microsserviços: OS e orquestração da Saga
 
 ## Operação e qualidade
 
+- [Dashboard Datadog métricas e alertas](../monitoring/README.md).
+
 - [Infraestrutura e instruções de implantação](https://github.com/jcontiero/oficina-k8s-infra).
 - [Cobertura e evidências de testes](relatorios/relatorio-cobertura-testes.md).
 

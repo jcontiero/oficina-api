@@ -230,3 +230,7 @@ jobs:
           kubectl apply -f /tmp/rendered-k8s/hpa.yaml -n "${K8S_NS}"
           kubectl rollout status deployment/oficina-api -n "${K8S_NS}" --timeout=300s
           kubectl rollout status deployment/oficina-api-worker -n "${K8S_NS}" --timeout=300s
+
+          # 4. Coletor somente leitura apos migrations e rollout
+          kubectl create configmap oficina-observabilidade --from-file=exportar_metricas.py=scripts/exportar_metricas.py --dry-run=client -o yaml | kubectl apply -f - -n "${K8S_NS}"
+          kubectl apply -f /tmp/rendered-k8s/observabilidade.yaml -n "${K8S_NS}"
