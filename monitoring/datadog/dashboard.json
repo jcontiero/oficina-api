@@ -1,0 +1,598 @@
+{
+  "title": "Oficina — Homologação e operações",
+  "description": "Monitoramento da aplicação distribuída: latência, Kubernetes, disponibilidade, Saga e integrações.",
+  "layout_type": "ordered",
+  "widgets": [
+    {
+      "definition": {
+        "type": "note",
+        "content": "Homologação — APIs, workers, dados de negócio e integrações. Volume diário usa o dia UTC corrente. Diagnóstico mede abertura da Saga até a resposta DiagnosticoConcluido; Execução e Finalização usam permanências encerradas no histórico da OS nas últimas 24h. Valores não medem o reparo físico. Healthchecks a cada minuto; dados disponíveis a partir da ativação do coletor. Filtre os logs por saga_id/os_id para acompanhar uma execução.",
+        "background_color": "white",
+        "font_size": "14",
+        "text_align": "left",
+        "show_tick": false
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Latência média das APIs (segundos)",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:trace.fastapi.request{env:$env} by {service}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "Média por serviço"
+              }
+            ],
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "s",
+          "include_zero": true
+        }
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Latência p95 das APIs (segundos)",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "p95:trace.fastapi.request{env:$env} by {service}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "p95 por serviço"
+              }
+            ],
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "s",
+          "include_zero": true
+        }
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "CPU por deployment (millicores)",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "sum:kubernetes.cpu.usage.total{kube_namespace:$namespace} by {kube_deployment} / 1000000"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "CPU"
+              }
+            ],
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "mCPU",
+          "include_zero": true
+        }
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Memória por deployment (MiB)",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "sum:kubernetes.memory.usage{kube_namespace:$namespace} by {kube_deployment} / 1048576"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "Memória"
+              }
+            ],
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "MiB",
+          "include_zero": true
+        }
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Healthcheck OS (1 saudável / 0 falha)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "min:oficina.health.ready{env:$env,service:oficina-api}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Healthcheck Billing (1 saudável / 0 falha)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "min:oficina.health.ready{env:$env,service:oficina-billing}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Healthcheck Execução (1 saudável / 0 falha)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "min:oficina.health.ready{env:$env,service:oficina-execucao}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Uptime observado OS no período",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.health.ready{env:$env,service:oficina-api}",
+                "aggregator": "avg"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1 * 100"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "%"
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Uptime observado Billing no período",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.health.ready{env:$env,service:oficina-billing}",
+                "aggregator": "avg"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1 * 100"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "%"
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Uptime observado Execução no período",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.health.ready{env:$env,service:oficina-execucao}",
+                "aggregator": "avg"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1 * 100"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "%"
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Disponibilidade observada por serviço (0–1)",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.health.ready{env:$env} by {service}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "Healthchecks"
+              }
+            ],
+            "display_type": "line"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "OS abertas hoje (UTC)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "max:oficina.os.criadas_dia{env:$env}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "OS"
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Volume diário de OS (máximo do dia UTC)",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "max:oficina.os.criadas_dia{env:$env}.rollup(max, 86400)"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "OS abertas no dia"
+              }
+            ],
+            "display_type": "bars"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Tempo médio em Diagnóstico (últimas 24h)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.saga.tempo_diagnostico_segundos{env:$env}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "s"
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Tempo médio em Execução (últimas 24h)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.os.tempo_status_segundos{env:$env,status:em_execucao}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "s"
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Tempo médio em Finalização (últimas 24h)",
+        "autoscale": true,
+        "precision": 2,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.os.tempo_status_segundos{env:$env,status:finalizada}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ]
+          }
+        ],
+        "custom_unit": "s"
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Tempo médio por status concluído da OS",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "avg:oficina.os.tempo_status_segundos{env:$env} by {status}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "Permanência média (24h)"
+              }
+            ],
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "s",
+          "include_zero": true
+        }
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Outbox e falhas de processamento",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "max:oficina.outbox.falhas_agendadas{env:$env}"
+              },
+              {
+                "data_source": "metrics",
+                "name": "q2",
+                "query": "max:oficina.outbox.pendentes{env:$env}"
+              },
+              {
+                "data_source": "metrics",
+                "name": "q3",
+                "query": "max:oficina.saga.intervencao_manual{env:$env}"
+              },
+              {
+                "data_source": "metrics",
+                "name": "q4",
+                "query": "max:oficina.saga.falha_financeira_pendente{env:$env}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "alias": "Falhas agendadas"
+              },
+              {
+                "formula": "q2",
+                "alias": "Pendentes"
+              },
+              {
+                "formula": "q3",
+                "alias": "Intervenção manual"
+              },
+              {
+                "formula": "q4",
+                "alias": "Falha financeira pendente"
+              }
+            ],
+            "display_type": "line"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Erros das APIs workers e integrações",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "data_source": "logs",
+                "name": "errors",
+                "search": {
+                  "query": "env:$env (service:oficina-api* OR service:oficina-billing* OR service:oficina-execucao*) (status:error OR @level:ERROR OR @level:CRITICAL)"
+                },
+                "indexes": [
+                  "*"
+                ],
+                "compute": {
+                  "aggregation": "count"
+                },
+                "group_by": [
+                  {
+                    "facet": "service",
+                    "limit": 10
+                  }
+                ]
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "errors"
+              }
+            ],
+            "display_type": "bars"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "log_stream",
+        "title": "Logs correlacionados — procure saga_id ou os_id",
+        "query": "env:$env (service:oficina-api* OR service:oficina-billing* OR service:oficina-execucao*)",
+        "indexes": [
+          "*"
+        ],
+        "columns": [
+          "timestamp",
+          "service",
+          "message"
+        ],
+        "message_display": "expanded-md"
+      }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "homolog"
+    },
+    {
+      "name": "namespace",
+      "prefix": "kube_namespace",
+      "default": "oficina-homolog"
+    }
+  ],
+  "notify_list": []
+}

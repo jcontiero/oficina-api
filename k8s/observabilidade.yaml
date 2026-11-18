@@ -1,0 +1,79 @@
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: oficina-observabilidade-db
+spec:
+  provider: gke
+  parameters:
+    secrets: |
+      - resourceName: "projects/fiap-project-514922/secrets/oficina-api-database-url-homolog/versions/latest"
+        path: "DATABASE_URL"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: oficina-observabilidade
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 55
+      ttlSecondsAfterFinished: 1800
+      template:
+        metadata:
+          labels:
+            app: oficina-observabilidade
+            tags.datadoghq.com/env: homolog
+            tags.datadoghq.com/service: oficina-observabilidade
+        spec:
+          serviceAccountName: oficina-api-sa
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          containers:
+            - name: metricas
+              image: us-east1-docker.pkg.dev/fiap-project-514922/oficina-docker/oficina-api:latest
+              command: ["python", "/opt/observabilidade/exportar_metricas.py"]
+              env:
+                - name: ENVIRONMENT
+                  value: homolog
+                - name: DD_DOGSTATSD_HOST
+                  value: datadog.datadog.svc.cluster.local
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  cpu: 150m
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: codigo
+                  mountPath: /opt/observabilidade
+                  readOnly: true
+                - name: banco
+                  mountPath: /mnt/secrets-store
+                  readOnly: true
+          volumes:
+            - name: codigo
+              configMap:
+                name: oficina-observabilidade
+            - name: banco
+              csi:
+                driver: secrets-store-gke.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: oficina-observabilidade-db
