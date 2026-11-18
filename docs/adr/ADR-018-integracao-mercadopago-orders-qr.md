@@ -2,7 +2,7 @@
 
 - **Data:** 2026-11-16
 - **Status:** Aceito (Fase 4 — Etapa P1)
-- **Contexto:** O enunciado da Fase 4 determina que o Billing Service se integre ao Mercado Pago para geração e verificação de pagamentos. O link histórico presente no PDF do desafio aponta para a documentação antiga de QR Code dinâmico, que foi sucedida pela **Orders API (`/v1/orders`)** na documentação vigente do Mercado Pago. Além disso, durante o planejamento foi identificada uma divergência documental entre exemplos textuais que mencionavam `/refunds` (plural, herdado da Payments API) e a referência de API de Orders que expõe `/v1/orders/{order_id}/refund` (singular).
+- **Contexto:** O enunciado da Fase 4 aponta para a documentação de QR Code do Mercado Pago. A página atual apresenta a **Orders API (`/v1/orders`)** e a migração da Dynamic QR Model API. A documentação explicativa dessa página contém exemplos inconsistentes em alguns trechos; a implementação e este ADR seguem os endpoints da referência oficial específica de Orders para QR Code e da página de migração da própria API.
 
 ## Decisão
 
@@ -42,3 +42,12 @@
 
 - **Positivas:** Conformidade com o modelo atual de QR Dinâmico (Orders API) do Mercado Pago; eliminação do risco de chamadas 404 no estorno por uso do path legado `/refunds`; proteção contra webhooks forjados e contra cobranças/estornos duplicados.
 - **Trade-offs:** Requer provisionamento prévio de Caixa/POS (`external_pos_id`) e credenciais de teste na conta de desenvolvedor do Mercado Pago para o teste de ponta a ponta em nuvem.
+
+## Referências oficiais conferidas em 18/11/2026
+
+- [Processamento de pagamentos com QR Code (Orders API)](https://www.mercadopago.com.br/developers/pt/docs/qr-code/payment-processing)
+- [Migração da Dynamic QR Model API para Orders API](https://www.mercadopago.com.br/developers/pt/docs/qr-code/resources/migrate-dynamic-qr-model-to-orders) — confirma `POST /v1/orders` com `config.qr.mode: dynamic`, `config.qr.external_pos_id`, `type_response.qr_data`, `GET /v1/orders/{order_id}`, `POST /v1/orders/{order_id}/cancel` e `POST /v1/orders/{order_id}/refund`.
+- [Referência API: cancelar order QR](https://www.mercadopago.com.br/developers/pt/reference/in-person-payments/qr-code/orders/cancel-order/post).
+- [Referência API: reembolsar order QR](https://www.mercadopago.com.br/developers/pt/reference/in-person-payments/qr-code/orders/refund-order/post).
+
+**Nota de compatibilidade documental:** a página de processamento contém exemplos textuais/cURLs inconsistentes para cancelamento e reembolso. As páginas específicas de referência API e de migração listam os endpoints usados pelo adaptador (cancelamento `POST .../cancel`, estorno `POST .../refund`, no singular). A implementação existente corresponde a essas referências específicas; não alterar os endpoints com base apenas nos exemplos inconsistentes da página de visão geral.

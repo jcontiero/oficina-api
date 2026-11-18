@@ -1,5 +1,7 @@
 # Diagrama de Componentes e Visão de Nuvem
 
+> Registro histórico anterior à divisão em microsserviços da Fase 4. Não representa a topologia atual de homologação. Consulte os ADRs [014](../adr/ADR-014-divisao-microsservicos-fase4.md), [015](../adr/ADR-015-bancos-por-servico-sql-nosql.md) e [016](../adr/ADR-016-saga-orquestrada-e-compensacoes.md) para os limites e bancos atuais.
+
 O diagrama abaixo apresenta o modelo de implantação completo no Google Cloud Platform (GCP).
 
 ```mermaid
